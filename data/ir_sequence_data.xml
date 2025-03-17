@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Production Order Sequence -->
+        <record id="seq_quote_system_production_order" model="ir.sequence">
+            <field name="name">Production Order Sequence</field>
+            <field name="code">quote_system.production.order</field>
+            <field name="prefix">PRO/%(year)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+        <record id="seq_rich_production_order" model="ir.sequence">
+            <field name="name">Rich Production Order</field>
+            <field name="code">rich_production.order</field>
+            <field name="prefix">PROD/%(year)s/</field>
+            <field name="padding">5</field>
+        </record>
+    </data>
+</odoo> 

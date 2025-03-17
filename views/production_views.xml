@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- List View -->
+        <record id="view_rich_production_list" model="ir.ui.view">
+            <field name="name">rich_production.production.list</field>
+            <field name="model">rich_production.production</field>
+            <field name="arch" type="xml">
+                <list>
+                    <field name="name"/>
+                    <field name="start_date"/>
+                    <field name="stop_date"/>
+                    <field name="duration"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Form View -->
+        <record id="view_rich_production_form" model="ir.ui.view">
+            <field name="name">rich_production.production.form</field>
+            <field name="model">rich_production.production</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <field name="start_date"/>
+                            <field name="stop_date"/>
+                            <field name="duration"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Calendar View -->
+        <record id="view_rich_production_calendar" model="ir.ui.view">
+            <field name="name">rich_production.production.calendar</field>
+            <field name="model">rich_production.production</field>
+            <field name="arch" type="xml">
+                <form>
+                    <div class="o_production_calendar_container">
+                        <field name="name" invisible="1"/>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body p-0">
+                                        <iframe src="/production/calendar" width="100%" height="700px" frameborder="0"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <!-- Main Action -->
+        <record id="action_rich_production" model="ir.actions.act_window">
+            <field name="name">Production Records</field>
+            <field name="res_model">rich_production.production</field>
+            <field name="view_mode">form,list</field>
+            <field name="view_id" ref="view_rich_production_calendar"/>
+        </record>
+
+        <!-- Menu Items -->
+        <menuitem id="menu_rich_production_root" 
+                  name="Rich Production" 
+                  sequence="10"/>
+
+        <menuitem id="menu_rich_production_main" 
+                  name="Production Records"
+                  parent="menu_rich_production_root"
+                  action="action_rich_production"
+                  sequence="1"/>
+    </data>
+</odoo> 

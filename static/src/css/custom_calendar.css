@@ -1,0 +1,56 @@
+#calendar {
+    max-width: 100%;
+    margin: 0 auto;
+    height: 700px;
+}
+
+.fc-event {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 5px;
+    margin: 2px 0;
+    border-left: 4px solid #3788d8;
+}
+
+.fc-daygrid-event {
+    white-space: normal !important;
+    align-items: normal !important;
+}
+
+.fc-event-title {
+    font-weight: bold;
+}
+
+.fc-toolbar-title {
+    font-size: 1.5em !important;
+    font-weight: bold;
+}
+
+.fc-button-primary {
+    background-color: #7C7BAD !important;
+    border-color: #7C7BAD !important;
+}
+
+.fc-button-primary:hover {
+    background-color: #645CAA !important;
+    border-color: #645CAA !important;
+}
+
+.fc-button-active {
+    background-color: #645CAA !important;
+    border-color: #645CAA !important;
+}
+
+.fc-day-today {
+    background-color: rgba(124, 123, 173, 0.1) !important;
+}
+
+@media (max-width: 768px) {
+    .fc-toolbar {
+        flex-direction: column;
+    }
+    
+    .fc-toolbar-chunk {
+        margin-bottom: 10px;
+    }
+} 
