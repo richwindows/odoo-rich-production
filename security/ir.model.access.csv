@@ -1,2 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_rich_production,rich_production.production,model_rich_production_production,base.group_user,1,1,1,1
+access_rich_production_production,rich_production.production,model_rich_production_production,base.group_user,1,1,1,1
+access_rich_production_product_line,rich_production.product_line,model_rich_production_product_line,base.group_user,1,1,1,1
+access_rich_production_line,rich_production.line,model_rich_production_line,base.group_user,1,1,1,1

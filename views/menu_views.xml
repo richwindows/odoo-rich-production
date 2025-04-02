@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<!-- 主菜单 -->
+<menuitem id="menu_rich_production_root" 
+          name="Rich Production" 
+          web_icon="rich_production,static/description/icon.png"
+          sequence="100"/>
+
+<!-- 生产日历子菜单 (FullCalendar) -->
+<menuitem id="menu_rich_production_calendar" 
+          name="Production Calendar" 
+          parent="menu_rich_production_root" 
+          action="rich_production.action_production_fullcalendar_view" 
+          sequence="10"/>
+
+<!-- 批次生产子菜单 -->
+<menuitem id="menu_rich_production_batch" 
+          name="Batch Production" 
+          parent="menu_rich_production_root" 
+          action="action_rich_production_batch_list" 
+          sequence="15"/>
+
+<!-- 订单列表子菜单 -->
+<menuitem id="menu_rich_production_list" 
+          name="Order List" 
+          parent="menu_rich_production_root" 
+          action="action_rich_production_list" 
+          sequence="20"/>
+</odoo> 

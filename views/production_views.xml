@@ -1,77 +1,266 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
-        <!-- List View -->
-        <record id="view_rich_production_list" model="ir.ui.view">
-            <field name="name">rich_production.production.list</field>
-            <field name="model">rich_production.production</field>
-            <field name="arch" type="xml">
-                <list>
-                    <field name="name"/>
-                    <field name="start_date"/>
-                    <field name="stop_date"/>
-                    <field name="duration"/>
-                </list>
-            </field>
-        </record>
+<data>
+    <!-- 列表视图 - 订单列表 -->
+    <record id="view_rich_production_list" model="ir.ui.view">
+        <field name="name">rich_production.production.list</field>
+        <field name="model">rich_production.production</field>
+        <field name="arch" type="xml">
+            <list string="Order List">
+                <field name="order_number" string="Invoice #"/>
+                <field name="invoice_id" string="Invoice"/>
+                <field name="customer_id" string="Customer"/>
+                <field name="items_count" string="Items"/>
+                <field name="batch" string="Batch"/>
+                <field name="batch_number" string="Batch No."/>
+                <field name="production_date" string="Production Date"/>
+                <field name="notes" string="Notes"/>
+                <field name="user_id" invisible="1"/>
+                <button name="action_view_details" string="View" type="object" icon="fa-eye" class="text-primary"/>
+                <button name="action_cutting_list" string="Cutting List" type="object" class="btn btn-primary"/>
+            </list>
+        </field>
+    </record>
 
-        <!-- Form View -->
-        <record id="view_rich_production_form" model="ir.ui.view">
-            <field name="name">rich_production.production.form</field>
-            <field name="model">rich_production.production</field>
-            <field name="arch" type="xml">
-                <form>
-                    <sheet>
+    <!-- 发票列表视图 -->
+    <record id="view_invoice_list_embedded" model="ir.ui.view">
+        <field name="name">account.move.list.embedded</field>
+        <field name="model">account.move</field>
+        <field name="arch" type="xml">
+            <list string="Invoices">
+                <field name="name" string="Invoice Number"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="invoice_date" string="Invoice Date"/>
+                <field name="amount_total" string="Amount" sum="Total"/>
+                <field name="amount_untaxed" string="Untaxed" sum="Total Untaxed"/>
+                <field name="state" string="Status"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 表单视图 -->
+    <record id="view_rich_production_form" model="ir.ui.view">
+        <field name="name">rich_production.production.form</field>
+        <field name="model">rich_production.production</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Production Name"/>
+                        </h1>
+                        <h3 class="mb-0">
+                            <label for="batch_number" string="Batch No." class="oe_edit_only"/>
+                            <field name="batch_number" placeholder="输入批次编号..." required="1"/>
+                        </h3>
+                        <h4 class="mb-0 mt-2">
+                            <label for="batch" string="Batch Name" class="oe_edit_only"/>
+                            <field name="batch" placeholder="输入批次名称..." required="1"/>
+                        </h4>
+                    </div>
+                    <group>
                         <group>
-                            <field name="name"/>
+                            <field name="capacity"/>
+                            <field name="total_items" readonly="1"/>
+                            <field name="customer_id"/>
+                            <field name="user_id"/>
+                            <field name="color" widget="color_picker"/>
+                        </group>
+                        <group>
+                            <field name="production_date"/>
                             <field name="start_date"/>
                             <field name="stop_date"/>
-                            <field name="duration"/>
+                            <field name="duration" string="Duration (Days)" readonly="1"/>
                         </group>
-                    </sheet>
-                </form>
-            </field>
-        </record>
+                    </group>
+                    <notebook>
+                        <page string="Orders" name="orders">
+                            <field name="invoice_ids" widget="many2many" options="{'no_create': True}" context="{'list_view_ref': 'rich_production.view_invoice_list_embedded'}"/>
+                            <group col="4" class="mt-3">
+                                <group string="Primary Order" colspan="2">
+                                    <field name="invoice_id"/>
+                                    <field name="order_number" readonly="1"/>
+                                </group>
+                                <group string="Order Info" colspan="2">
+                                    <field name="customer_id"/>
+                                    <field name="items_count" readonly="1"/>
+                                    <field name="total_items" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Product Details" name="products">
+                            <field name="product_line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="product_name"/>
+                                    <field name="quantity"/>
+                                    <field name="uom_id"/>
+                                    <field name="invoice_id"/>
+                                    <field name="invoice_name"/>
+                                </list>
+                            </field>
+                            <field name="product_summary" invisible="1"/>
+                        </page>
+                        <page string="Notes" name="notes">
+                            <field name="notes" placeholder="Enter notes here..."/>
+                        </page>
+                        <page string="Description" name="description">
+                            <field name="description" placeholder="Enter additional description here..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
 
-        <!-- Calendar View -->
-        <record id="view_rich_production_calendar" model="ir.ui.view">
-            <field name="name">rich_production.production.calendar</field>
-            <field name="model">rich_production.production</field>
-            <field name="arch" type="xml">
-                <form>
-                    <div class="o_production_calendar_container">
-                        <field name="name" invisible="1"/>
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-body p-0">
-                                        <iframe src="/production/calendar" width="100%" height="700px" frameborder="0"/>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </field>
-        </record>
+    <!-- 搜索视图 -->
+    <record id="view_rich_production_search" model="ir.ui.view">
+        <field name="name">rich_production.production.search</field>
+        <field name="model">rich_production.production</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="batch_number"/>
+                <field name="batch"/>
+                <field name="order_number"/>
+                <field name="customer_id"/>
+                <field name="user_id"/>
+                <filter string="My Productions" name="my_productions" domain="[('user_id', '=', uid)]"/>
+                <separator/>
+                <filter string="Has Batch Number" name="has_batch_number" domain="[('batch_number', '!=', False)]"/>
+                <filter string="Has Batch" name="has_batch" domain="[('batch', '!=', False)]"/>
+                <filter string="Multiple Orders" name="multiple_orders" domain="[('invoice_ids', '!=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter string="Batch No." name="group_batch_number" context="{'group_by': 'batch_number'}"/>
+                    <filter string="Batch" name="group_batch" context="{'group_by': 'batch'}"/>
+                    <filter string="Customer" name="customer" context="{'group_by': 'customer_id'}"/>
+                    <filter string="Production Date" name="production_date" context="{'group_by': 'production_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    
+    <!-- 裁剪清单表单视图 -->
+    <record id="view_rich_production_cutting_form" model="ir.ui.view">
+        <field name="name">rich_production.production.cutting.form</field>
+        <field name="model">rich_production.production</field>
+        <field name="arch" type="xml">
+            <form string="Cutting List" create="true" edit="true">
+                <sheet>
+                    <field name="name" invisible="1" required="1" />
+                    <group>
+                        <group>
+                            <field name="batch_number" placeholder="输入批次编号..."/>
+                            <field name="capacity"/>
+                        </group>
+                        <group>
+                            <field name="production_date" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="选择订单">
+                        <field name="invoice_ids" widget="many2many" options="{'no_create': True}" context="{'list_view_ref': 'rich_production.view_invoice_list_embedded'}" nolabel="1"/>
+                    </group>
+                    <group string="Product Details">
+                        <field name="product_line_ids" nolabel="1" readonly="1">
+                            <list>
+                                <field name="product_name"/>
+                                <field name="quantity"/>
+                                <field name="uom_id"/>
+                                <field name="invoice_name"/>
+                            </list>
+                        </field>
+                    </group>
+                    <group string="Notes">
+                        <field name="notes" placeholder="Enter notes here..." nolabel="1"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button string="Print" name="action_print_cutting_list" type="object" class="btn-primary"/>
+                    <button string="Close" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
 
-        <!-- Main Action -->
-        <record id="action_rich_production" model="ir.actions.act_window">
-            <field name="name">Production Records</field>
-            <field name="res_model">rich_production.production</field>
-            <field name="view_mode">form,list</field>
-            <field name="view_id" ref="view_rich_production_calendar"/>
-        </record>
+    <!-- 生产日历动作 -->
+    <record id="action_rich_production_production" model="ir.actions.act_window">
+        <field name="name">生产</field>
+        <field name="res_model">rich_production.production</field>
+        <field name="view_mode">tree,form,calendar</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                创建您的第一个生产记录
+            </p>
+        </field>
+    </record>
 
-        <!-- Menu Items -->
-        <menuitem id="menu_rich_production_root" 
-                  name="Rich Production" 
-                  sequence="10"/>
+    <!-- 生产列表动作 -->
+    <record id="action_rich_production_list" model="ir.actions.act_window">
+        <field name="name">Order List</field>
+        <field name="res_model">rich_production.production</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_rich_production_list"/>
+        <field name="search_view_id" ref="view_rich_production_search"/>
+        <field name="domain">['|', ('invoice_id', '!=', False), ('invoice_ids', '!=', False)]</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first order
+            </p>
+            <p>
+                Manage your production orders.
+            </p>
+        </field>
+    </record>
 
-        <menuitem id="menu_rich_production_main" 
-                  name="Production Records"
-                  parent="menu_rich_production_root"
-                  action="action_rich_production"
-                  sequence="1"/>
-    </data>
+    <!-- 批次分组视图 - 生产列表 -->
+    <record id="view_rich_production_batch_list" model="ir.ui.view">
+        <field name="name">rich_production.production.batch.list</field>
+        <field name="model">rich_production.production</field>
+        <field name="arch" type="xml">
+            <list string="Batch Production">
+                <field name="batch_number" string="Batch No."/>
+                <field name="batch" string="Batch Name"/>
+                <field name="capacity" string="Capacity"/>
+                <field name="total_items" string="Total Items"/>
+                <field name="customer_id" string="Customer"/>
+                <field name="production_date" string="Production Date"/>
+                <field name="start_date" string="Start Date"/>
+                <field name="stop_date" string="End Date"/>
+                <field name="notes" string="Notes"/>
+                <field name="user_id" string="Responsible"/>
+                <button name="action_view_details" string="View" type="object" icon="fa-eye" class="text-primary"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- 批次生产列表动作 -->
+    <record id="action_rich_production_batch_list" model="ir.actions.act_window">
+        <field name="name">Batch Production</field>
+        <field name="res_model">rich_production.production</field>
+        <field name="view_mode">list,form</field>
+        <field name="view_id" ref="view_rich_production_batch_list"/>
+        <field name="search_view_id" ref="view_rich_production_search"/>
+        <field name="context">{'search_default_group_batch': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first batch production
+            </p>
+            <p>
+                Organize your production records by batch.
+            </p>
+        </field>
+    </record>
+
+    <!-- 生产Owl日历客户端动作 -->
+    <record id="action_production_owl_calendar" model="ir.actions.client">
+        <field name="name">Owl Production Calendar</field>
+        <field name="tag">rich_production.action_production_calendar</field>
+    </record>
+</data>
 </odoo> 

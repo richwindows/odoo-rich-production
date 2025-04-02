@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Local FullCalendar JS -->
+    <record id="rich_production_fullcalendar_js" model="ir.asset">
+        <field name="name">Rich Production FullCalendar JS</field>
+        <field name="bundle">web.assets_backend</field>
+        <field name="path">/rich_production/static/lib/fullcalendar.min.js</field>
+        <field name="sequence">10</field>
+    </record>
+    
+    <!-- Custom Calendar Implementation JS -->
+    <record id="rich_production_calendar_js" model="ir.asset">
+        <field name="name">Rich Production Calendar JS</field>
+        <field name="bundle">web.assets_backend</field>
+        <field name="path">/rich_production/static/src/js/rich_production_calendar.js</field>
+        <field name="sequence">20</field>
+    </record>
+    
+    <!-- Custom Calendar CSS -->
+    <record id="rich_production_calendar_css" model="ir.asset">
+        <field name="name">Rich Production Calendar CSS</field>
+        <field name="bundle">web.assets_backend</field>
+        <field name="path">/rich_production/static/src/css/rich_production_calendar.css</field>
+    </record>
+</odoo> 

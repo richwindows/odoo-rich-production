@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- FullCalendar Client Action -->
+        <record id="action_production_fullcalendar_view" model="ir.actions.client">
+            <field name="name">Production Calendar</field>
+            <field name="tag">rich_production.fullcalendar_action</field>
+        </record>
+    </data>
+</odoo> 

@@ -1,0 +1,211 @@
+/* Rich Production Calendar with FullCalendar - v3.0.0 */
+
+.o_rich_production_calendar {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: white;
+}
+
+.o_rich_production_calendar #calendar {
+    flex-grow: 1; /* Allow calendar to fill available space */
+    min-height: 500px; /* Ensure minimum height */
+}
+
+/* Basic event styling */
+.fc-event {
+    border-radius: 4px !important;
+    border: none !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 2px 4px;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fc-event:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Extra info display */
+.fc-event-extra-info {
+    font-size: 0.8em;
+    opacity: 0.85;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Day cell styling */
+.fc-daygrid-day:hover {
+    background-color: #f8f9fa;
+}
+
+/* Today cell highlight */
+.fc-day-today {
+    background-color: #e9f5ff !important;
+}
+
+/* Header styling */
+.calendar-header {
+    background-color: #f8f9fa;
+}
+
+/* Rich Production Calendar CSS */
+
+/* 控制日历容器 */
+.o_fullcalendar_container {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 80px) !important;
+}
+
+.o_fullcalendar_view {
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    height: 100%;
+    padding: 0 16px; /* 左右边距 */
+    min-height: calc(100vh - 120px) !important;
+    scroll-behavior: smooth; /* 平滑滚动 */
+}
+
+/* 设置日历大小 */
+.fc-calendar-container {
+    height: auto !important;
+    min-height: 100% !important;
+    width: 100%;
+}
+
+/* 确保日历在容器中占满空间 */
+.fc {
+    height: 100% !important;
+    max-height: none !important;
+}
+
+.fc .fc-view-harness {
+    height: auto !important;
+    flex-grow: 1;
+}
+
+/* 调整日历头部边距 */
+.fc .fc-toolbar.fc-header-toolbar {
+    margin-bottom: 0.5em;
+    padding: 0 0.5em;
+}
+
+/* 增加日期单元格和事件的间距 */
+.fc .fc-daygrid-day-frame {
+    padding: 4px 2px;
+    min-height: 120px; /* 增加单元格最小高度 */
+}
+
+/* 调整日历事件大小 */
+.fc .fc-daygrid-event {
+    padding: 3px 5px;
+    font-size: 0.85em;
+    margin-top: 2px;
+}
+
+/* 减小日历头部和单元格大小 */
+.fc .fc-toolbar-title {
+    font-size: 1.5em;
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number {
+    font-size: 0.9em;
+    padding: 4px;
+}
+
+.fc .fc-daygrid-day-top {
+    justify-content: center;
+}
+
+/* 减小事件额外信息的字体大小 */
+.fc-event-extra-info {
+    font-size: 0.75em !important;
+    line-height: 1.2;
+}
+
+/* 调整日历视图在不同屏幕尺寸下的响应式行为 */
+@media (max-width: 768px) {
+    .fc .fc-toolbar {
+        flex-direction: column;
+    }
+    
+    .fc .fc-toolbar-chunk {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* 自定义事件样式 */
+.fc-event {
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.fc-event:hover {
+    transform: scale(1.02);
+    z-index: 10;
+}
+
+/* 隐藏非当前月的单元格 */
+.fc .fc-day-other {
+    visibility: hidden;
+    border: none;
+    background: transparent;
+}
+
+/* 当前月日期单元格样式优化 */
+.fc .fc-daygrid-day.fc-day-today {
+    background-color: rgba(55, 136, 216, 0.1);
+}
+
+.fc .fc-day-past {
+    background-color: #fafafa;
+}
+
+/* 调整日历视图高度自适应 */
+.fc .fc-view-harness-active {
+    height: auto !important;
+    min-height: calc(100vh - 180px) !important;
+}
+
+/* 周视图特定样式 */
+.fc-dayGridWeek-view .fc-scroller {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.fc-dayGridWeek-view .fc-daygrid-body {
+    min-height: calc(100vh - 200px) !important;
+}
+
+.fc-dayGridWeek-view .fc-view-harness {
+    min-height: calc(100vh - 200px) !important;
+}
+
+.fc-dayGridWeek-view .fc-daygrid-day {
+    height: calc(100vh - 220px) !important;
+    min-height: 300px !important;
+}
+
+/* 增加月视图单元格高度 */
+.fc-dayGridMonth-view .fc-daygrid-day-frame {
+    min-height: 150px !important; /* 增加月视图单元格最小高度 */
+    padding: 6px 4px;
+}
+
+/* 确保月视图可滚动 */
+.fc-dayGridMonth-view .fc-scroller {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+/* 优化事件显示 */
+.fc .fc-daygrid-day-events {
+    padding: 4px 0;
+} 
