@@ -50,6 +50,36 @@ class ProductionLine(models.Model):
     production_id = fields.Many2one('rich_production.production', string='Production', required=True, ondelete='cascade')
     product_id = fields.Many2one('product.product', string='Product', required=True)
     quantity = fields.Float(string='Quantity', required=True, default=1.0)
-    uom_id = fields.Many2one('uom.uom', string='Unit of Measure', related='product_id.uom_id', readonly=True)
+    uom_id = fields.Many2one('uom.uom', string='Unit of Measure')
     note = fields.Text(string='Note')
+    notes = fields.Text(string='Notes')
+    
+    # 发票相关字段
+    invoice_id = fields.Many2one('account.move', string='Source Invoice')
+    invoice_line_id = fields.Many2one('account.move.line', string='Invoice Line')
+    
+    # 产品基本信息
+    product_name = fields.Char(string='Product Name', related='product_id.name', store=True)
+    invoice_name = fields.Char(string='Invoice Number', related='invoice_id.name', store=True)
+    
+    # 尺寸信息
+    width = fields.Char(string='Width')
+    height = fields.Char(string='Height')
+    
+    # 材料信息
+    frame = fields.Char(string='Frame')
+    glass = fields.Char(string='Glass')
+    color = fields.Char(string='Color')
+    
+    # 附加选项
+    grid = fields.Char(string='Grid')
+    argon = fields.Boolean(string='Argon', default=False)
+    
+    # 价格信息
+    unit_price = fields.Float(string='Unit Price')
+    tax_percent = fields.Float(string='Tax %')
+    amount = fields.Float(string='Amount')
+    
+    def name_get(self):
+        return [(rec.id, f"{rec.product_name} - {rec.quantity} ({rec.invoice_name})" if rec.product_name else "New Line") for rec in self]
 

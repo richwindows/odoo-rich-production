@@ -56,7 +56,7 @@ class Production(models.Model):
     calendar_display = fields.Char(string='Calendar Display', compute='_compute_calendar_display', store=True)
     
     # 产品明细行
-    product_line_ids = fields.One2many('rich_production.product_line', 'production_id', 
+    product_line_ids = fields.One2many('rich_production.line', 'production_id', 
                                        string='Product Lines', copy=True)
     
     @api.depends('invoice_ids')
@@ -215,14 +215,45 @@ class Production(models.Model):
                         product_name = line.product_id.name
                         uom = line.product_uom_id if hasattr(line, 'product_uom_id') else False
                         
-                        # 添加到产品行
-                        product_lines.append((0, 0, {
+                        # 从发票行直接获取详细信息
+                        product_details = {
                             'product_id': product_id,
                             'quantity': qty,
                             'uom_id': uom.id if uom else False,
                             'invoice_id': invoice.id,
-                        }))
-                            
+                            'invoice_line_id': line.id,
+                            'unit_price': line.price_unit if hasattr(line, 'price_unit') else 0.0,
+                            'amount': line.price_subtotal if hasattr(line, 'price_subtotal') else 0.0,
+                        }
+                        
+                        # 映射account.move.line字段到production.line字段
+                        field_mapping = {
+                            'width': 'window_width',
+                            'height': 'window_height',
+                            'frame': 'frame_type',
+                            'glass': 'glass_type',
+                            'color': 'color_type',
+                            'grid': 'grid_type',
+                            'argon': 'argon'
+                        }
+                        
+                        # 从发票行获取自定义字段
+                        for prod_field, inv_field in field_mapping.items():
+                            if hasattr(line, inv_field) and getattr(line, inv_field):
+                                product_details[prod_field] = getattr(line, inv_field)
+                        
+                        # 获取税率信息
+                        if hasattr(line, 'tax_ids') and line.tax_ids:
+                            tax_rate = sum(tax.amount for tax in line.tax_ids) / 100.0
+                            product_details['tax_percent'] = tax_rate * 100
+                        
+                        # 从发票行描述中获取产品详细信息
+                        description = line.name if hasattr(line, 'name') else ''
+                        product_details['notes'] = description
+                        
+                        # 添加到产品行
+                        product_lines.append((0, 0, product_details))
+                        
                         # 合并相同产品以文本显示
                         key = f"{product_id}_{product_name}"
                         if key in product_totals:
@@ -237,7 +268,7 @@ class Production(models.Model):
                 
                 # 更新产品行
                 record.product_line_ids = product_lines
-                            
+                
                 record.items_count = total
                 
                 # 格式化产品信息并保存到product_summary

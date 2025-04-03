@@ -3,4 +3,3 @@
 from . import models
 from . import account_move
 from . import production
-from . import product_line

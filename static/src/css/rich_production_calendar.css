@@ -208,4 +208,162 @@
 /* 优化事件显示 */
 .fc .fc-daygrid-day-events {
     padding: 4px 0;
+}
+
+/* 日历视图样式 */
+.fc-event {
+    cursor: pointer;
+}
+
+.fc-event-title {
+    font-weight: bold;
+}
+
+/* 宽表单样式 */
+.oe_form_sheet_width_wider {
+    max-width: 100% !important;  /* 使用100%宽度而不是固定宽度 */
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+}
+
+/* 确保表格占据所有可用空间 */
+.o_list_view {
+    width: 100% !important;
+}
+
+/* 扩展字段显示 */
+.o_form_view .o_group {
+    width: 100% !important;
+}
+
+/* 使表格列宽自适应内容 */
+.o_list_view th, .o_list_view td {
+    white-space: nowrap;
+}
+
+/* 覆盖Odoo默认表单样式限制 */
+.o_form_view .o_form_sheet_bg {
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+.o_form_view .o_form_sheet {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+/* 强制内容区域占据所有可用空间 */
+.o_content {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+/* 强制表单完全展开 */
+.o_form_full_width {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* 优化产品表格显示 */
+.o_list_view_extended {
+    width: 100% !important;
+    overflow-x: auto !important;
+}
+
+/* 增加表格行高度 */
+.o_list_view_extended tbody tr {
+    height: 40px !important;
+}
+
+/* 调整表格字体大小 */
+.o_list_view_extended td, 
+.o_list_view_extended th {
+    font-size: 14px !important;
+    padding: 8px 4px !important;
+}
+
+/* 确保表格边界正确显示 */
+.o_list_view_extended table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 100% !important;
+}
+
+/* 修复Odoo表单控件容器大小 */
+.o_form_view .o_form_sheet_bg .o_form_sheet {
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+}
+
+/* 去除所有边距和内边距限制 */
+.o_form_view .oe_chatter {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+}
+
+/* 扩展主应用容器 */
+.o_main_content,
+.o_content,
+.o_action_manager,
+.o_view_controller,
+.o_renderer,
+.o_form_renderer,
+.o_form_sheet_bg,
+.o_form_sheet {
+    max-width: none !important;
+    width: 100% !important;
+}
+
+/* 修复Odoo网格布局 */
+@media (min-width: 1200px) {
+    .o_form_view .o_inner_group {
+        grid-template-columns: 200px 1fr !important;
+    }
+}
+
+/* 覆盖最高级别容器 */
+.o_web_client .o_action_manager {
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* 禁用一些可能限制宽度的容器约束 */
+.o_form_statusbar,
+.o_form_sheet_bg,
+.o_form_sheet {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* 下料单按钮样式 */
+.oe_button_box .oe_stat_button {
+    background-color: #3498db !important;
+    color: white !important;
+    border: none !important;
+    width: auto !important;
+    padding: 5px 15px !important;
+    height: auto !important;
+    margin-left: 8px !important;
+}
+
+.oe_button_box .oe_stat_button .o_stat_text {
+    color: white !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+}
+
+.oe_button_box .oe_stat_button .fa {
+    color: white !important;
+    font-size: 16px !important;
+    margin-right: 4px !important;
 } 
