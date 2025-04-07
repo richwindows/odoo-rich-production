@@ -22,6 +22,7 @@
     ],
     'installable': True,
     'application': True,
+    'auto_install': False,
     'category': 'Manufacturing',
 }
 

@@ -7,14 +7,13 @@
         <field name="model">rich_production.production</field>
         <field name="arch" type="xml">
             <list string="Order List">
-                <field name="order_number" string="Invoice #"/>
-                <field name="invoice_id" string="Invoice"/>
+                <field name="name" string="Production"/>
+                <field name="invoice_ids" string="Invoices" widget="many2many_tags"/>
                 <field name="customer_id" string="Customer"/>
-                <field name="items_count" string="Items"/>
+                <field name="total_items" string="Items"/>
                 <field name="batch" string="Batch"/>
                 <field name="batch_number" string="Batch No."/>
                 <field name="production_date" string="Production Date"/>
-                <field name="notes" string="Notes"/>
                 <field name="user_id" invisible="1"/>
                 <button name="action_view_details" string="View" type="object" icon="fa-eye" class="text-primary"/>
                 <button name="action_cutting_list" string="Cutting List" type="object" class="btn btn-primary"/>
@@ -92,30 +91,39 @@
                             </group>
                         </div>
                     </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <group string="Order Information">
+                                <field name="customer_id"/>
+                                <field name="total_items" readonly="1"/>
+                            </group>
+                        </div>
+                    </div>
                     <notebook>
                         <page string="Orders" name="orders">
                             <field name="invoice_ids" widget="many2many" options="{'no_create': True}" context="{'list_view_ref': 'rich_production.view_invoice_list_embedded'}"/>
                             <div class="row mt-3">
                                 <div class="col-md-6">
-                                    <group string="Primary Order">
-                                        <field name="invoice_id"/>
-                                        <field name="order_number" readonly="1"/>
-                                    </group>
-                                </div>
-                                <div class="col-md-6">
-                                    <group string="Order Info">
+                                    <group string="Order Information">
                                         <field name="customer_id"/>
-                                        <field name="items_count" readonly="1"/>
                                         <field name="total_items" readonly="1"/>
                                     </group>
                                 </div>
                             </div>
                         </page>
                         <page string="Product Details" name="products">
-                            <field name="product_line_ids" class="o_list_view_extended">
+                            <div class="oe_button_box" name="products_button_box">
+                                <button name="action_refresh_product_lines" type="object" 
+                                        string="刷新产品明细" class="btn btn-secondary"
+                                        help="从关联的发票重新加载产品明细行" />
+                                <button name="action_force_save_lines_sql" type="object" 
+                                        string="直接SQL保存" class="btn btn-danger"
+                                        help="通过直接SQL操作保存产品明细行" />
+                            </div>
+                            <field name="product_line_ids" class="o_list_view_extended" widget="one2many" mode="tree,form" options="{'reload_on_button': true}">
                                 <list editable="bottom">
                                     <field name="product_id"/>
-                                    <field name="product_name"/>
+                                    <field name="display_name"/>
                                     <field name="quantity"/>
                                     <field name="uom_id"/>
                                     <field name="width" string="Width"/>
@@ -126,13 +134,10 @@
                                     <field name="grid" string="Grid"/>
                                     <field name="argon" string="Argon"/>
                                     <field name="unit_price" sum="Total"/>
-                                    <field name="tax_percent"/>
                                     <field name="amount" sum="Total"/>
                                     <field name="invoice_name"/>
-                                    <field name="notes" invisible="1"/>
                                 </list>
                             </field>
-                            <field name="product_summary" invisible="1"/>
                         </page>
                         <page string="Notes" name="notes">
                             <field name="notes" placeholder="Enter notes here..."/>
@@ -160,7 +165,6 @@
                 <field name="name"/>
                 <field name="batch_number"/>
                 <field name="batch"/>
-                <field name="order_number"/>
                 <field name="customer_id"/>
                 <field name="user_id"/>
                 <filter string="My Productions" name="my_productions" domain="[('user_id', '=', uid)]"/>
@@ -212,7 +216,7 @@
                     <group string="Product Details">
                         <field name="product_line_ids" nolabel="1" readonly="1">
                             <list>
-                                <field name="product_name"/>
+                                <field name="display_name"/>
                                 <field name="quantity"/>
                                 <field name="uom_id"/>
                                 <field name="width"/>
@@ -259,7 +263,7 @@
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="view_rich_production_list"/>
         <field name="search_view_id" ref="view_rich_production_search"/>
-        <field name="domain">['|', ('invoice_id', '!=', False), ('invoice_ids', '!=', False)]</field>
+        <field name="domain">[('invoice_ids', '!=', False)]</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
                 Create your first order
