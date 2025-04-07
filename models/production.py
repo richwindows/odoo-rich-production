@@ -115,8 +115,8 @@ class Production(models.Model):
                 if record.invoice_ids[0].partner_id:
                     record.customer_id = record.invoice_ids[0].partner_id
                 
-                # 更新产品行
-                self._update_product_lines_from_invoices()
+                # 更新产品行 - 传递onchange上下文避免在onchange中执行SQL
+                record.with_context(onchange_self=True)._update_product_lines_from_invoices()
                 
                 # 更新名称 - 如果批次号存在，使用它作为名称的基础
                 if record.batch_number:
@@ -134,25 +134,36 @@ class Production(models.Model):
                     record.name = f'生产批次 ({len(record.invoice_ids)} 个订单)'
     
     def _update_product_lines_from_invoices(self):
-        """从发票更新产品行数据 - 简化版本，直接复制invoice.line到product.line"""
+        """从发票更新产品行数据 - 不清空现有行，采用更新或创建方式"""
         self.ensure_one()
         
-        # 清空现有产品行
-        self.product_line_ids = [(5, 0, 0)]
-        product_lines = []
+        # 获取现有行的字典，以(invoice_id, line_id)为键
+        existing_lines = {}
+        for line in self.product_line_ids:
+            if line.invoice_id and line.invoice_line_id:
+                key = (line.invoice_id.id, line.invoice_line_id.id)
+                existing_lines[key] = line
         
-        # 遍历每个发票和行项目，直接创建产品行
+        # 记录需要保留的行ID
+        line_ids_to_keep = []
+        lines_to_update = []
+        lines_to_create = []
+        
+        # 遍历每个发票和行项目
         for invoice in self.invoice_ids:
-            for line in invoice.invoice_line_ids:
-                if not line.product_id:
+            for inv_line in invoice.invoice_line_ids:
+                if not inv_line.product_id:
                     continue
-
+                    
+                key = (invoice.id, inv_line.id)
+                
                 # 基本字段
                 line_vals = {
-                    'product_id': line.product_id.id,
-                    'quantity': line.quantity if hasattr(line, 'quantity') else 1.0,
+                    'product_id': inv_line.product_id.id,
+                    'quantity': inv_line.quantity if hasattr(inv_line, 'quantity') else 1.0,
                     'invoice_id': invoice.id,
-                    'invoice_line_id': line.id,
+                    'invoice_line_id': inv_line.id,
+                    'production_id': self.id,
                 }
                 
                 # 记录所有可能的字段映射 - 包含常见命名模式
@@ -173,8 +184,8 @@ class Production(models.Model):
                 # 尝试从所有可能的字段名中获取值
                 for prod_field, inv_fields in field_mappings.items():
                     for inv_field in inv_fields:
-                        if hasattr(line, inv_field) and getattr(line, inv_field):
-                            value = getattr(line, inv_field)
+                        if hasattr(inv_line, inv_field) and getattr(inv_line, inv_field):
+                            value = getattr(inv_line, inv_field)
                             # 对于argon字段，确保值是布尔型
                             if prod_field == 'argon' and not isinstance(value, bool):
                                 if isinstance(value, str):
@@ -185,8 +196,8 @@ class Production(models.Model):
                             break  # 找到第一个匹配项后停止
                 
                 # 另外检查产品的属性字段
-                if line.product_id:
-                    prod = line.product_id
+                if inv_line.product_id:
+                    prod = inv_line.product_id
                     # 检查产品属性
                     product_field_mappings = {
                         'width': ['x_width', 'width', 'default_width'],
@@ -205,19 +216,52 @@ class Production(models.Model):
                                     break
                 
                 # 如果有UOM信息，复制
-                if hasattr(line, 'product_uom_id') and line.product_uom_id:
-                    line_vals['uom_id'] = line.product_uom_id.id
+                if hasattr(inv_line, 'product_uom_id') and inv_line.product_uom_id:
+                    line_vals['uom_id'] = inv_line.product_uom_id.id
                 
-                # 日志调试产品行数据
-                _logger.debug(f"产品行数据: {line_vals}")
-                
-                # 添加到产品行列表
-                product_lines.append((0, 0, line_vals))
+                # 检查是更新还是创建
+                if key in existing_lines:
+                    # 更新现有行
+                    line = existing_lines[key]
+                    line_ids_to_keep.append(line.id)
+                    # 移除production_id避免重复设置
+                    if 'production_id' in line_vals:
+                        del line_vals['production_id']
+                    lines_to_update.append((1, line.id, line_vals))
+                    _logger.debug(f"更新产品行: line_id={line.id}, values={line_vals}")
+                else:
+                    # 创建新行
+                    lines_to_create.append((0, 0, line_vals))
+                    _logger.debug(f"创建产品行: values={line_vals}")
         
-        # 批量创建产品行        
-        if product_lines:
-            self.product_line_ids = product_lines
-            _logger.info(f"已从发票创建 {len(product_lines)} 条产品行")
+        # 删除未匹配的行
+        for line in self.product_line_ids:
+            if line.id not in line_ids_to_keep:
+                lines_to_update.append((2, line.id, False))  # 2表示删除
+        
+        # 批量更新所有行   
+        update_commands = lines_to_update + lines_to_create
+        if update_commands:
+            self.write({'product_line_ids': update_commands})
+            # 记录日志
+            total_updated = len([cmd for cmd in lines_to_update if cmd[0] == 1])
+            total_deleted = len([cmd for cmd in lines_to_update if cmd[0] == 2])
+            total_created = len(lines_to_create)
+            _logger.info(f"已处理产品行: 更新={total_updated}, 删除={total_deleted}, 创建={total_created}")
+            
+            # 验证处理结果 - 仅在非onchange环境中执行SQL查询
+            if not self._context.get('onchange_self'):  # 检查上下文避免在onchange中执行SQL
+                try:
+                    # 仅当ID是实际数据库ID时执行SQL
+                    if isinstance(self.id, int):
+                        self.env.cr.execute("""
+                            SELECT COUNT(*) FROM rich_production_line 
+                            WHERE production_id = %s
+                        """, (self.id,))
+                        count = self.env.cr.fetchone()[0]
+                        _logger.info(f"验证结果: production_id={self.id} 有 {count} 条产品行")
+                except Exception as e:
+                    _logger.warning(f"无法验证产品行数量: {str(e)}")
     
     def action_refresh_product_lines(self):
         """手动刷新产品行按钮操作"""
@@ -251,6 +295,9 @@ class Production(models.Model):
             
         # 首先通过常规方法更新产品行
         self._update_product_lines_from_invoices()
+        
+        # 强制提交事务
+        self.env.cr.commit()
         
         # 确保产品行已保存到数据库
         self.env.cr.execute("""
@@ -309,37 +356,51 @@ class Production(models.Model):
 
     def write(self, vals):
         """覆盖写入方法，确保产品行数据正确保存"""
-        print(f"[DEBUG] 写入开始，字段: {vals.keys()}")
-        
-        # 记录原始产品行数量
-        old_lines_count = {}
-        for record in self:
-            old_lines_count[record.id] = len(record.product_line_ids)
-        
         result = super(Production, self).write(vals)
         
-        # 检查产品行是否丢失
-        for record in self:
-            if record.id in old_lines_count and old_lines_count[record.id] > 0 and len(record.product_line_ids) == 0:
-                print(f"[DEBUG] 产品行丢失: 原有 {old_lines_count[record.id]} 行，现在有 0 行")
-                if record.invoice_ids:
-                    print(f"[DEBUG] 尝试恢复产品行数据...")
-                    self._update_product_lines_from_invoices()
+        # 在写入完成后，如果更新了发票，则同步更新产品行
+        if 'invoice_ids' in vals and self.invoice_ids:
+            # 使用事务新建游标确保完全提交
+            self.env.cr.commit()
+            
+            # 强制刷新产品行
+            for record in self:
+                _logger.info(f"在write后强制更新产品行数据: production_id = {record.id}")
+                record._update_product_lines_from_invoices()
+                
+                # 验证数据是否正确保存
+                self.env.cr.execute("""
+                    SELECT COUNT(*) FROM rich_production_line 
+                    WHERE production_id = %s
+                """, (record.id,))
+                count = self.env.cr.fetchone()[0]
+                _logger.info(f"验证: production_id={record.id} 有 {count} 条产品行")
         
         return result
-    
+        
     @api.model
     def create(self, vals):
         """覆盖创建方法，确保产品行数据正确保存"""
         record = super(Production, self).create(vals)
         
-        # 如果有发票但没有产品行，生成产品行
-        if 'invoice_ids' in vals and vals['invoice_ids'] and not record.product_line_ids:
-            print(f"[DEBUG] 创建记录时自动生成产品行")
-            record._update_product_lines_from_invoices()
+        # 使用事务新建游标确保完全提交
+        self.env.cr.commit()
         
-        return record 
-
+        # 如果有发票，不管是否有产品行，都强制更新产品行
+        if 'invoice_ids' in vals and vals['invoice_ids']:
+            _logger.info(f"在create后强制更新产品行数据: production_id = {record.id}")
+            record._update_product_lines_from_invoices()
+            
+            # 验证数据是否正确保存
+            self.env.cr.execute("""
+                SELECT COUNT(*) FROM rich_production_line 
+                WHERE production_id = %s
+            """, (record.id,))
+            count = self.env.cr.fetchone()[0]
+            _logger.info(f"验证: production_id={record.id} 有 {count} 条产品行")
+        
+        return record
+    
     def action_inspect_invoice_fields(self):
         """辅助方法：检查发票行项目中的可用字段，帮助诊断字段映射问题"""
         self.ensure_one()

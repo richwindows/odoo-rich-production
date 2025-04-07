@@ -10,7 +10,7 @@ from .production import Production
 class ProductionLine(models.Model):
     _name = 'rich_production.line'
     _description = 'Production Line'
-    _rec_name = 'product_id'  # 使用产品名作为记录名称
+    _rec_name = 'display_name'  # 使用display_name作为记录名称
     
     production_id = fields.Many2one('rich_production.production', string='Production', required=True, ondelete='cascade', index=True)
     product_id = fields.Many2one('product.product', string='Product', required=True)
@@ -60,7 +60,10 @@ class ProductionLine(models.Model):
     def _compute_display_name(self):
         """计算用于显示的产品名称（普通文本）"""
         for record in self:
-            record.display_name = record.product_id.name if record.product_id else ""
+            if record.product_id:
+                record.display_name = record.product_id.name or "未命名产品"
+            else:
+                record.display_name = "未命名产品"
     
     # 添加SQL约束确保数据一致性
     _sql_constraints = [

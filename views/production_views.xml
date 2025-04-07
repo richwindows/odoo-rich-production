@@ -119,6 +119,9 @@
                                 <button name="action_force_save_lines_sql" type="object" 
                                         string="直接SQL保存" class="btn btn-danger"
                                         help="通过直接SQL操作保存产品明细行" />
+                                <button name="action_inspect_invoice_fields" type="object" 
+                                        string="检查发票字段" class="btn btn-info"
+                                        help="检查发票行项目的字段，帮助诊断映射问题" />
                             </div>
                             <field name="product_line_ids" class="o_list_view_extended" widget="one2many" mode="tree,form" options="{'reload_on_button': true}">
                                 <list editable="bottom">
