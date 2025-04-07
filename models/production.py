@@ -341,17 +341,29 @@ class Production(models.Model):
         }
         
     def action_print_cutting_list(self):
-        """打印裁剪清单"""
+        """打印裁剪清单 - 使用Owl客户端动作展示预览"""
         self.ensure_one()
+        
+        # 获取当前上下文
+        ctx = dict(self._context) or {}
+        # 添加必要的上下文变量
+        ctx.update({
+            'active_id': self.id,
+            'active_model': 'rich_production.production',
+            'production_id': self.id,
+        })
+        
+        # 返回客户端动作，使用额外的JS初始化代码
         return {
             'type': 'ir.actions.client',
-            'tag': 'display_notification',
+            'tag': 'rich_production.cutting_list_preview',
             'params': {
-                'title': '打印中',
-                'message': f'正在打印批次 {self.batch_number or self.batch or "未命名"} 的裁剪清单',
-                'sticky': False,
-                'type': 'success',
-            }
+                'productionId': self.id,
+            },
+            'target': 'new',
+            'context': ctx,
+            # 添加JS初始化代码，确保ID能够正确传递
+            'init_js': f"localStorage.setItem('rich_production_current_id', {self.id});"
         }
 
     def write(self, vals):
@@ -496,4 +508,46 @@ class Production(models.Model):
                 'sticky': True,
                 'type': 'success'
             }
+        }
+
+    def action_download_pdf(self):
+        """下载PDF版本的下料单"""
+        self.ensure_one()
+        
+        # 获取或创建报表记录
+        report = self.env['rich_production.cutting.list.report'].search(
+            [('production_id', '=', self.id)], limit=1)
+        if not report:
+            report = self.env['rich_production.cutting.list.report'].create({
+                'production_id': self.id
+            })
+            report.generate_report()
+            
+        # 返回PDF下载URL
+        pdf_url = f"/rich_production/print_pdf/{report.id}"
+        return {
+            'type': 'ir.actions.act_url',
+            'url': pdf_url,
+            'target': 'self',
+        }
+        
+    def action_download_excel(self):
+        """下载Excel版本的下料单"""
+        self.ensure_one()
+        
+        # 获取或创建报表记录
+        report = self.env['rich_production.cutting.list.report'].search(
+            [('production_id', '=', self.id)], limit=1)
+        if not report:
+            report = self.env['rich_production.cutting.list.report'].create({
+                'production_id': self.id
+            })
+            report.generate_report()
+            
+        # 返回Excel下载URL
+        excel_url = f"/rich_production/download_excel/{report.id}"
+        return {
+            'type': 'ir.actions.act_url',
+            'url': excel_url,
+            'target': 'self',
         } 

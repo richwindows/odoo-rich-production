@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 下料单HTML预览模板 -->
+    <template id="cutting_list_preview_template">
+        <html>
+            <head>
+                <title>Cutting List - <t t-esc="production.batch_number or ''"/></title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 20px;
+                    }
+                    .header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    .batch-info {
+                        margin-bottom: 20px;
+                        font-size: 18px;
+                        font-weight: bold;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    th, td {
+                        border: 1px solid #ccc;
+                        padding: 8px;
+                        text-align: center;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f5f5dc;
+                    }
+                    .controls {
+                        margin: 20px 0;
+                    }
+                    .button {
+                        display: inline-block;
+                        background-color: #4CAF50;
+                        color: white;
+                        padding: 8px 16px;
+                        text-decoration: none;
+                        margin-right: 10px;
+                        border-radius: 4px;
+                    }
+                    .excel-button {
+                        background-color: #2196F3;
+                    }
+                    .print-button {
+                        background-color: #ff9800;
+                    }
+                    @media print {
+                        .controls {
+                            display: none;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="controls">
+                    <a href="#" onclick="window.print(); return false;" class="button print-button">打印此页</a>
+                    <a t-att-href="'/rich_production/print_pdf/%s' % report.id" class="button" target="_blank">下载PDF</a>
+                    <a t-att-href="'/rich_production/download_excel/%s' % report.id" class="button excel-button">下载Excel</a>
+                    <button onclick="window.close()" class="button" style="background-color: #f44336;">关闭</button>
+                </div>
+                
+                <div class="header">
+                    <h1>General Information</h1>
+                </div>
+                
+                <div class="batch-info">
+                    Batch NO.: <t t-esc="production.batch_number or ''"/>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>ID</th>
+                            <th>Style</th>
+                            <th>W</th>
+                            <th>H</th>
+                            <th>FH</th>
+                            <th>Frame</th>
+                            <th>Glass</th>
+                            <th>Argon</th>
+                            <th>Grid</th>
+                            <th>Color</th>
+                            <th>Note</th>
+                            <th>ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="product_lines" t-as="line">
+                            <tr>
+                                <td><t t-esc="line['customer']"/></td>
+                                <td><t t-esc="line['id']"/></td>
+                                <td><t t-esc="line['style']"/></td>
+                                <td><t t-esc="line['width']"/></td>
+                                <td><t t-esc="line['height']"/></td>
+                                <td><t t-esc="line['fh']"/></td>
+                                <td><t t-esc="line['frame']"/></td>
+                                <td><t t-esc="line['glass']"/></td>
+                                <td><t t-esc="line['argon']"/></td>
+                                <td><t t-esc="line['grid']"/></td>
+                                <td><t t-esc="line['color']"/></td>
+                                <td><t t-esc="line['note']"/></td>
+                                <td><t t-esc="line['id']"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </body>
+        </html>
+    </template>
+
+    <!-- 下料单报表表单视图 -->
+    <record id="view_cutting_list_report_form" model="ir.ui.view">
+        <field name="name">rich_production.cutting.list.report.form</field>
+        <field name="model">rich_production.cutting.list.report</field>
+        <field name="arch" type="xml">
+            <form string="Cutting List Report">
+                <sheet>
+                    <field name="state" invisible="1"/>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="production_id" readonly="1"/>
+                        </h1>
+                    </div>
+                    
+                    <div class="text-center mt16 mb16" invisible="state != 'done'">
+                        <h3>下料单已生成成功，请选择以下操作：</h3>
+                        <div class="mt16">
+                            <button name="action_preview_report" string="预览表格" type="object" class="btn btn-primary" icon="fa-eye"/>
+                            <button name="action_download_excel" string="下载Excel" type="object" class="btn btn-success ml8" icon="fa-download"/>
+                        </div>
+                    </div>
+                    
+                    <div invisible="state == 'done'">
+                        <p>正在生成报表，请稍候...</p>
+                    </div>
+                    
+                    <footer>
+                        <button string="关闭" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    
+    <!-- 下料单PDF报表 -->
+    <record id="action_cutting_list_pdf_report" model="ir.actions.report">
+        <field name="name">下料单</field>
+        <field name="model">rich_production.production</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">rich_production.cutting_list_pdf_template</field>
+        <field name="report_file">rich_production.cutting_list_pdf_template</field>
+        <field name="print_report_name">'Cutting_List_%s' % (object.batch_number or '')</field>
+    </record>
+    
+    <!-- 下料单PDF模板 -->
+    <template id="cutting_list_pdf_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="production">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2 class="text-center">General Information</h2>
+                        
+                        <div class="row mb16">
+                            <div class="col-6">
+                                <strong>Batch NO.:</strong> <t t-esc="production.batch_number or ''"/>
+                            </div>
+                        </div>
+                        
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>ID</th>
+                                    <th>Style</th>
+                                    <th>W</th>
+                                    <th>H</th>
+                                    <th>FH</th>
+                                    <th>Frame</th>
+                                    <th>Glass</th>
+                                    <th>Argon</th>
+                                    <th>Grid</th>
+                                    <th>Color</th>
+                                    <th>ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="item_id" t-value="1"/>
+                                <t t-foreach="production.product_line_ids" t-as="line">
+                                    <tr>
+                                        <t t-set="customer" t-value="line.invoice_id.partner_id.name if line.invoice_id and line.invoice_id.partner_id else ''"/>
+                                        <t t-set="customer_code" t-value="customer[:8] + str(line.invoice_id.id % 100000) if customer and len(customer) > 10 else customer"/>
+                                        
+                                        <t t-set="style" t-value="''"/>
+                                        <t t-set="product_name" t-value="line.product_id.name if line.product_id else ''"/>
+                                        <t t-if="'XOX' in product_name">
+                                            <t t-set="style" t-value="'XOX'"/>
+                                        </t>
+                                        <t t-elif="'XO' in product_name">
+                                            <t t-set="style" t-value="'XO'"/>
+                                        </t>
+                                        <t t-elif="'OX' in product_name">
+                                            <t t-set="style" t-value="'OX'"/>
+                                        </t>
+                                        
+                                        <td><t t-esc="customer_code"/></td>
+                                        <td><t t-esc="item_id"/></td>
+                                        <td><t t-esc="style"/></td>
+                                        <td><t t-esc="line.width or ''"/></td>
+                                        <td><t t-esc="line.height or ''"/></td>
+                                        <td></td>
+                                        <td><t t-esc="line.frame or ''"/></td>
+                                        <td><t t-esc="line.glass or ''"/></td>
+                                        <td><t t-esc="'Yes' if line.argon else ''"/></td>
+                                        <td><t t-esc="line.grid or ''"/></td>
+                                        <td><t t-esc="line.color or ''"/></td>
+                                        <td><t t-esc="item_id"/></td>
+                                    </tr>
+                                    <t t-set="item_id" t-value="item_id + 1"/>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+    
+    <!-- 报表窗口动作 -->
+    <record id="action_cutting_list_report" model="ir.actions.act_window">
+        <field name="name">下料单报表</field>
+        <field name="res_model">rich_production.cutting.list.report</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_cutting_list_report_form"/>
+    </record>
+
+    <!-- 用于嵌入式显示的下料单预览模板 -->
+    <template id="cutting_list_embed_template">
+        <html>
+            <head>
+                <title>Cutting List - <t t-esc="production.batch_number or ''"/></title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 20px;
+                    }
+                    .header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    .batch-info {
+                        margin-bottom: 20px;
+                        font-size: 18px;
+                        font-weight: bold;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    th, td {
+                        border: 1px solid #ccc;
+                        padding: 8px;
+                        text-align: center;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f5f5dc;
+                    }
+                    @media print {
+                        body {
+                            margin: 0;
+                            padding: 10px;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>General Information</h1>
+                </div>
+                
+                <div class="batch-info">
+                    Batch NO.: <t t-esc="production.batch_number or ''"/>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>ID</th>
+                            <th>Style</th>
+                            <th>W</th>
+                            <th>H</th>
+                            <th>FH</th>
+                            <th>Frame</th>
+                            <th>Glass</th>
+                            <th>Argon</th>
+                            <th>Grid</th>
+                            <th>Color</th>
+                            <th>Note</th>
+                            <th>ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-foreach="product_lines" t-as="line">
+                            <tr>
+                                <td><t t-esc="line['customer']"/></td>
+                                <td><t t-esc="line['id']"/></td>
+                                <td><t t-esc="line['style']"/></td>
+                                <td><t t-esc="line['width']"/></td>
+                                <td><t t-esc="line['height']"/></td>
+                                <td><t t-esc="line['fh']"/></td>
+                                <td><t t-esc="line['frame']"/></td>
+                                <td><t t-esc="line['glass']"/></td>
+                                <td><t t-esc="line['argon']"/></td>
+                                <td><t t-esc="line['grid']"/></td>
+                                <td><t t-esc="line['color']"/></td>
+                                <td><t t-esc="line['note']"/></td>
+                                <td><t t-esc="line['id']"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </body>
+        </html>
+    </template>
+</odoo> 
