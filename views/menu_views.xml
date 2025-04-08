@@ -13,17 +13,25 @@
           action="rich_production.action_production_fullcalendar_view" 
           sequence="10"/>
 
-<!-- 批次生产子菜单 -->
-<menuitem id="menu_rich_production_batch" 
-          name="Batch Production" 
-          parent="menu_rich_production_root" 
-          action="action_rich_production_batch_list" 
-          sequence="15"/>
-
 <!-- 订单列表子菜单 -->
 <menuitem id="menu_rich_production_list" 
-          name="Order List" 
+          name="Production List" 
           parent="menu_rich_production_root" 
           action="action_rich_production_list" 
+          sequence="15"/>
+
+<!-- 生产排期日历子菜单 -->
+<menuitem id="menu_rich_production_schedule" 
+          name="Schedule Calendar" 
+          parent="menu_rich_production_root" 
+          action="rich_production.action_schedule_fullcalendar_view" 
           sequence="20"/>
+
+<!-- Delivery Calendar子菜单 -->
+<menuitem id="menu_delivery_calendar"
+          name="Delivery Calendar"
+          parent="menu_rich_production_root"
+          action="rich_production.action_delivery_fullcalendar_view"
+          sequence="25"/>
+
 </odoo> 

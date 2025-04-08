@@ -6,8 +6,8 @@
         <field name="name">rich_production.production.list</field>
         <field name="model">rich_production.production</field>
         <field name="arch" type="xml">
-            <list string="Order List">
-                <field name="name" string="Production"/>
+            <list string="Production List">
+                <field name="batch_number" string="Production"/>
                 <field name="invoice_ids" string="Invoices" widget="many2many_tags"/>
                 <field name="customer_id" string="Customer"/>
                 <field name="total_items" string="Items"/>
@@ -16,7 +16,7 @@
                 <field name="production_date" string="Production Date"/>
                 <field name="user_id" invisible="1"/>
                 <button name="action_view_details" string="View" type="object" icon="fa-eye" class="text-primary"/>
-                <button name="action_cutting_list" string="Cutting List" type="object" class="btn btn-primary"/>
+                <button name="action_cutting_list" string="Cutting List" type="object" class="btn btn-primary" invisible="1"/>
             </list>
         </field>
     </record>
@@ -261,7 +261,7 @@
 
     <!-- 生产列表动作 -->
     <record id="action_rich_production_list" model="ir.actions.act_window">
-        <field name="name">Order List</field>
+        <field name="name">Production List</field>
         <field name="res_model">rich_production.production</field>
         <field name="view_mode">list,form</field>
         <field name="view_id" ref="view_rich_production_list"/>
@@ -269,7 +269,7 @@
         <field name="domain">[('invoice_ids', '!=', False)]</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Create your first order
+                Create your first production order
             </p>
             <p>
                 Manage your production orders.
@@ -277,49 +277,36 @@
         </field>
     </record>
 
-    <!-- 批次分组视图 - 生产列表 -->
-    <record id="view_rich_production_batch_list" model="ir.ui.view">
-        <field name="name">rich_production.production.batch.list</field>
+    <!-- 生产排期日历视图 -->
+    <record id="view_rich_production_schedule_calendar" model="ir.ui.view">
+        <field name="name">rich_production.production.schedule.calendar</field>
         <field name="model">rich_production.production</field>
         <field name="arch" type="xml">
-            <list string="Batch Production">
-                <field name="batch_number" string="Batch No."/>
-                <field name="batch" string="Batch Name"/>
-                <field name="capacity" string="Capacity"/>
-                <field name="total_items" string="Total Items"/>
-                <field name="customer_id" string="Customer"/>
-                <field name="production_date" string="Production Date"/>
-                <field name="start_date" string="Start Date"/>
-                <field name="stop_date" string="End Date"/>
-                <field name="notes" string="Notes"/>
-                <field name="user_id" string="Responsible"/>
-                <button name="action_view_details" string="View" type="object" icon="fa-eye" class="text-primary"/>
-            </list>
+            <calendar string="Production Schedule" date_start="start_date" date_stop="stop_date" color="color" quick_create="false" form_view_id="view_rich_production_form">
+                <field name="batch_number"/>
+                <field name="total_items"/>
+                <field name="customer_id"/>
+            </calendar>
         </field>
     </record>
-
-    <!-- 批次生产列表动作 -->
-    <record id="action_rich_production_batch_list" model="ir.actions.act_window">
-        <field name="name">Batch Production</field>
+    
+    <!-- 生产排期日历动作 -->
+    <record id="action_rich_production_schedule" model="ir.actions.act_window">
+        <field name="name">Production Schedule</field>
         <field name="res_model">rich_production.production</field>
-        <field name="view_mode">list,form</field>
-        <field name="view_id" ref="view_rich_production_batch_list"/>
+        <field name="view_mode">calendar,list,form</field>
+        <field name="view_id" ref="view_rich_production_schedule_calendar"/>
         <field name="search_view_id" ref="view_rich_production_search"/>
-        <field name="context">{'search_default_group_batch': 1}</field>
+        <field name="domain">[('start_date', '!=', False)]</field>
+        <field name="context">{'search_default_group_batch_number': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                Create your first batch production
+                Create your first production schedule
             </p>
             <p>
-                Organize your production records by batch.
+                Plan and organize your production schedule in calendar view.
             </p>
         </field>
-    </record>
-
-    <!-- 生产Owl日历客户端动作 -->
-    <record id="action_production_owl_calendar" model="ir.actions.client">
-        <field name="name">Owl Production Calendar</field>
-        <field name="tag">rich_production.action_production_calendar</field>
     </record>
 </data>
 </odoo> 

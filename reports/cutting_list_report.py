@@ -37,6 +37,7 @@ class CuttingListReport(models.TransientModel):
     def generate_report(self):
         """生成Excel格式的下料单报表"""
         self.ensure_one()
+        _logger = logging.getLogger(__name__)
         
         if not xlsxwriter:
             raise UserError(_("You need to install the xlsxwriter Python library."))
@@ -121,48 +122,99 @@ class CuttingListReport(models.TransientModel):
         row = 4
         item_id = 1
         
+        # 获取ProductionLine模型定义，用于检查字段
+        ProductionLine = self.env['rich_production.line']
+        has_quantity_field = 'quantity' in ProductionLine._fields
+        
+        _logger.info(f"开始生成Excel报表，生产ID: {production.id}, 产品行数: {len(production.product_line_ids)}")
+        
         for line in production.product_line_ids:
-            # 提取产品类型（Style）- 通常在产品名称中包含，如XO, XOX
-            product_name = line.product_id.name if line.product_id else ''
-            style = ''
-            
-            # 尝试从产品名称中提取风格类型
-            if 'XOX' in product_name:
-                style = 'XOX'
-            elif 'XO' in product_name:
-                style = 'XO'
-            elif 'OX' in product_name:
-                style = 'OX'
-            elif 'Picture' in product_name:
-                style = 'P'
-            elif 'Casement' in product_name:
-                style = 'C'
-            
-            # 获取客户名
-            customer = line.invoice_id.partner_id.name if line.invoice_id and line.invoice_id.partner_id else ''
-            # 如果客户名称太长，截取前10个字符加编号
-            if customer and len(customer) > 10:
-                customer_code = customer[:8] + str(line.invoice_id.id % 100000)
-            else:
-                customer_code = customer
-            
-            # 写入行数据
-            worksheet.write(row, 0, customer_code, cell_style)    # Customer
-            worksheet.write(row, 1, item_id, cell_style)          # ID
-            worksheet.write(row, 2, style, cell_style)            # Style
-            worksheet.write(row, 3, line.width or '', cell_style) # W
-            worksheet.write(row, 4, line.height or '', cell_style) # H
-            worksheet.write(row, 5, '', cell_style)               # FH - 留空
-            worksheet.write(row, 6, line.frame or '', cell_style) # Frame
-            worksheet.write(row, 7, line.glass or '', cell_style) # Glass
-            worksheet.write(row, 8, 'Yes' if line.argon else '', cell_style) # Argon
-            worksheet.write(row, 9, line.grid or '', cell_style)  # Grid
-            worksheet.write(row, 10, line.color or '', cell_style) # Color
-            worksheet.write(row, 11, line.notes or '', cell_style) # Note
-            worksheet.write(row, 12, item_id, cell_style)         # ID再次
-            
-            row += 1
-            item_id += 1
+            try:
+                # 提取产品类型（Style）- 通常在产品名称中包含，如XO, XOX
+                product_name = ""
+                if line.product_id:
+                    product_name = line.product_id.name or ""
+                
+                style = ""
+                # 尝试从产品名称中提取风格类型
+                if 'XOX' in product_name:
+                    style = 'XOX'
+                elif 'XO' in product_name:
+                    style = 'XO'
+                elif 'OX' in product_name:
+                    style = 'OX'
+                elif 'Picture' in product_name:
+                    style = 'P'
+                elif 'Casement' in product_name:
+                    style = 'C'
+                else:
+                    style = product_name
+                
+                # 获取客户名
+                customer_code = ""
+                if line.invoice_id and line.invoice_id.partner_id:
+                    customer = line.invoice_id.partner_id.name or ""
+                    # 如果客户名称太长，截取前10个字符加编号
+                    if customer and len(customer) > 10:
+                        customer_code = customer[:8] + str(line.invoice_id.id % 100000)
+                    else:
+                        customer_code = customer
+                
+                # 确定产品数量
+                quantity = 1
+                
+                # 优先使用quantity字段
+                if has_quantity_field and hasattr(line, 'quantity'):
+                    try:
+                        if line.quantity:
+                            quantity = int(float(line.quantity))
+                    except (ValueError, TypeError) as e:
+                        _logger.warning(f"转换产品行ID {line.id} 的数量失败: {e}")
+                
+                # 如果没有quantity字段或值无效，尝试使用product_qty字段
+                if quantity <= 0 and hasattr(line, 'product_qty'):
+                    try:
+                        if line.product_qty:
+                            quantity = int(float(line.product_qty))
+                    except (ValueError, TypeError) as e:
+                        _logger.warning(f"转换产品行ID {line.id} 的product_qty失败: {e}")
+                
+                # 确保数量至少为1
+                quantity = max(1, quantity)
+                _logger.info(f"产品行ID: {line.id}, 产品: {product_name}, 数量: {quantity}")
+                
+                # 安全获取字段值，防止缺少字段导致错误
+                width = getattr(line, 'width', '') or ''
+                height = getattr(line, 'height', '') or ''
+                frame = getattr(line, 'frame', '') or ''
+                glass = getattr(line, 'glass', '') or ''
+                grid = getattr(line, 'grid', '') or ''
+                color = getattr(line, 'color', '') or ''
+                notes = getattr(line, 'notes', '') or ''
+                argon = getattr(line, 'argon', False)
+                
+                # 为每个数量创建一行
+                for i in range(quantity):
+                    # 写入行数据
+                    worksheet.write(row, 0, customer_code, cell_style)    # Customer
+                    worksheet.write(row, 1, item_id, cell_style)          # ID
+                    worksheet.write(row, 2, style, cell_style)            # Style
+                    worksheet.write(row, 3, width, cell_style)            # W
+                    worksheet.write(row, 4, height, cell_style)           # H
+                    worksheet.write(row, 5, '', cell_style)               # FH - 留空
+                    worksheet.write(row, 6, frame, cell_style)            # Frame
+                    worksheet.write(row, 7, glass, cell_style)            # Glass
+                    worksheet.write(row, 8, 'Yes' if argon else '', cell_style) # Argon
+                    worksheet.write(row, 9, grid, cell_style)             # Grid
+                    worksheet.write(row, 10, color, cell_style)           # Color
+                    worksheet.write(row, 11, notes, cell_style)           # Notes
+                    worksheet.write(row, 12, item_id, cell_style)         # ID再次
+                    
+                    row += 1
+                    item_id += 1
+            except Exception as e:
+                _logger.exception(f"处理产品行ID {line.id} 时出错: {e}")
+                # 继续处理下一行，不中断报表生成
         
         # 关闭工作簿并获取内容
         workbook.close()
@@ -175,6 +227,8 @@ class CuttingListReport(models.TransientModel):
             'report_filename': report_name,
             'state': 'done'
         })
+        
+        _logger.info(f"Excel报表生成完成，总行数: {item_id-1}")
         
         return {
             'type': 'ir.actions.act_window',

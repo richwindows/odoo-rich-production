@@ -12,6 +12,7 @@ class RichProduction(http.Controller):
     @http.route('/rich_production/cutting_list_preview/<int:report_id>', type='http', auth='user')
     def cutting_list_preview(self, report_id, **kw):
         """预览下料单HTML格式"""
+        _logger = logging.getLogger(__name__)
         report = request.env['rich_production.cutting.list.report'].browse(report_id)
         if not report.exists():
             return request.not_found()
@@ -28,6 +29,27 @@ class RichProduction(http.Controller):
         item_id = 1
         
         for line in production.product_line_ids:
+            # 尝试使用不同的字段名获取产品数量
+            quantity = 1  # 默认为1
+            
+            # 首先尝试quantity字段
+            if hasattr(line, 'quantity') and line.quantity:
+                try:
+                    quantity = int(float(line.quantity))
+                except (ValueError, TypeError):
+                    _logger.warning(f"无法转换数量值: {line.quantity}")
+            
+            # 然后尝试product_qty字段
+            elif hasattr(line, 'product_qty') and line.product_qty:
+                try:
+                    quantity = int(float(line.product_qty))
+                except (ValueError, TypeError):
+                    _logger.warning(f"无法转换数量值: {line.product_qty}")
+            
+            # 确保最小数量为1
+            quantity = max(1, quantity)
+            _logger.info(f"产品行 {line.id} 数量: {quantity}")
+            
             # 提取产品类型（Style）
             product_name = line.product_id.name if line.product_id else ''
             style = ''
@@ -43,6 +65,8 @@ class RichProduction(http.Controller):
                 style = 'P'
             elif 'Casement' in product_name:
                 style = 'C'
+            else:
+                style = product_name
             
             # 获取客户名
             customer = line.invoice_id.partner_id.name if line.invoice_id and line.invoice_id.partner_id else ''
@@ -51,24 +75,26 @@ class RichProduction(http.Controller):
                 customer_code = customer[:8] + str(line.invoice_id.id % 100000)
             else:
                 customer_code = customer
-                
-            # 添加产品行数据
-            product_lines.append({
-                'id': item_id,
-                'customer': customer_code,
-                'style': style,
-                'width': line.width or '',
-                'height': line.height or '',
-                'fh': '',
-                'frame': line.frame or '',
-                'glass': line.glass or '',
-                'argon': 'Yes' if line.argon else '',
-                'grid': line.grid or '',
-                'color': line.color or '',
-                'note': line.notes or '',
-            })
             
-            item_id += 1
+            # 为每个数量创建一行
+            for i in range(quantity):
+                # 添加产品行数据
+                product_lines.append({
+                    'id': item_id,
+                    'customer': customer_code,
+                    'style': style,
+                    'width': line.width or '',
+                    'height': line.height or '',
+                    'fh': '',
+                    'frame': line.frame or '',
+                    'glass': line.glass or '',
+                    'argon': 'Yes' if line.argon else '',
+                    'grid': line.grid or '',
+                    'color': line.color or '',
+                    'note': line.notes or '',
+                })
+                
+                item_id += 1
         
         # 渲染模板
         return request.render('rich_production.cutting_list_preview_template', {
@@ -266,7 +292,29 @@ class RichProduction(http.Controller):
             # 获取产品行数据
             data = [['Customer', 'ID', 'Style', 'W', 'H', 'FH', 'Frame', 'Glass', 'Argon', 'Grid', 'Color', 'Note', 'ID']]
             
-            for i, line in enumerate(production.product_line_ids):
+            item_id = 1
+            for line in production.product_line_ids:
+                # 尝试使用不同的字段名获取产品数量
+                quantity = 1  # 默认为1
+                
+                # 首先尝试quantity字段
+                if hasattr(line, 'quantity') and line.quantity:
+                    try:
+                        quantity = int(float(line.quantity))
+                    except (ValueError, TypeError):
+                        _logger.warning(f"无法转换数量值: {line.quantity}")
+                
+                # 然后尝试product_qty字段
+                elif hasattr(line, 'product_qty') and line.product_qty:
+                    try:
+                        quantity = int(float(line.product_qty))
+                    except (ValueError, TypeError):
+                        _logger.warning(f"无法转换数量值: {line.product_qty}")
+                
+                # 确保最小数量为1
+                quantity = max(1, quantity)
+                _logger.info(f"产品行 {line.id} 数量: {quantity}")
+                
                 # 提取产品类型
                 product_name = line.product_id.name if line.product_id else ''
                 style = ''
@@ -282,6 +330,8 @@ class RichProduction(http.Controller):
                     style = 'P'
                 elif 'Casement' in product_name:
                     style = 'C'
+                else:
+                    style = product_name
                 
                 # 获取客户名
                 customer = line.invoice_id.partner_id.name if line.invoice_id and line.invoice_id.partner_id else ''
@@ -290,24 +340,27 @@ class RichProduction(http.Controller):
                     customer_code = customer[:8] + str(line.invoice_id.id % 100000)
                 else:
                     customer_code = customer
-                    
-                # 添加行数据
-                row = [
-                    customer_code,
-                    i + 1,  # ID
-                    style,
-                    line.width or '',
-                    line.height or '',
-                    '',  # FH
-                    line.frame or '',
-                    line.glass or '',
-                    'Yes' if line.argon else '',
-                    line.grid or '',
-                    line.color or '',
-                    line.notes or '',
-                    i + 1,  # ID again
-                ]
-                data.append(row)
+                
+                # 为每个数量创建一行
+                for i in range(quantity):
+                    # 添加行数据
+                    row = [
+                        customer_code,
+                        item_id,  # ID
+                        style,
+                        line.width or '',
+                        line.height or '',
+                        '',  # FH
+                        line.frame or '',
+                        line.glass or '',
+                        'Yes' if line.argon else '',
+                        line.grid or '',
+                        line.color or '',
+                        line.notes or '',
+                        item_id,  # ID again
+                    ]
+                    data.append(row)
+                    item_id += 1
             
             # 创建表格
             if len(data) == 1:  # 只有标题行
@@ -365,6 +418,7 @@ class RichProduction(http.Controller):
     @http.route('/rich_production/cutting_list_preview_embed/<int:production_id>', type='http', auth='user')
     def cutting_list_preview_embed(self, production_id, **kw):
         """用于嵌入式显示的下料单预览"""
+        _logger = logging.getLogger(__name__)
         production = request.env['rich_production.production'].browse(production_id)
         if not production.exists():
             return request.not_found()
@@ -385,6 +439,27 @@ class RichProduction(http.Controller):
         item_id = 1
         
         for line in production.product_line_ids:
+            # 尝试使用不同的字段名获取产品数量
+            quantity = 1  # 默认为1
+            
+            # 首先尝试quantity字段
+            if hasattr(line, 'quantity') and line.quantity:
+                try:
+                    quantity = int(float(line.quantity))
+                except (ValueError, TypeError):
+                    _logger.warning(f"无法转换数量值: {line.quantity}")
+            
+            # 然后尝试product_qty字段
+            elif hasattr(line, 'product_qty') and line.product_qty:
+                try:
+                    quantity = int(float(line.product_qty))
+                except (ValueError, TypeError):
+                    _logger.warning(f"无法转换数量值: {line.product_qty}")
+            
+            # 确保最小数量为1
+            quantity = max(1, quantity)
+            _logger.info(f"产品行 {line.id} 数量: {quantity}")
+            
             # 提取产品类型（Style）
             product_name = line.product_id.name if line.product_id else ''
             style = ''
@@ -400,6 +475,8 @@ class RichProduction(http.Controller):
                 style = 'P'
             elif 'Casement' in product_name:
                 style = 'C'
+            else:
+                style = product_name
             
             # 获取客户名
             customer = line.invoice_id.partner_id.name if line.invoice_id and line.invoice_id.partner_id else ''
@@ -408,24 +485,26 @@ class RichProduction(http.Controller):
                 customer_code = customer[:8] + str(line.invoice_id.id % 100000)
             else:
                 customer_code = customer
-                
-            # 添加产品行数据
-            product_lines.append({
-                'id': item_id,
-                'customer': customer_code,
-                'style': style,
-                'width': line.width or '',
-                'height': line.height or '',
-                'fh': '',
-                'frame': line.frame or '',
-                'glass': line.glass or '',
-                'argon': 'Yes' if line.argon else '',
-                'grid': line.grid or '',
-                'color': line.color or '',
-                'note': line.notes or '',
-            })
             
-            item_id += 1
+            # 为每个数量创建一行
+            for i in range(quantity):
+                # 添加产品行数据
+                product_lines.append({
+                    'id': item_id,
+                    'customer': customer_code,
+                    'style': style,
+                    'width': line.width or '',
+                    'height': line.height or '',
+                    'fh': '',
+                    'frame': line.frame or '',
+                    'glass': line.glass or '',
+                    'argon': 'Yes' if line.argon else '',
+                    'grid': line.grid or '',
+                    'color': line.color or '',
+                    'note': line.notes or '',
+                })
+                
+                item_id += 1
         
         # 渲染模板 - 使用专为嵌入式设计的模板
         return request.render('rich_production.cutting_list_embed_template', {

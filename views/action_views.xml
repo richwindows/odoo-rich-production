@@ -6,5 +6,17 @@
             <field name="name">Production Calendar</field>
             <field name="tag">rich_production.fullcalendar_action</field>
         </record>
+        
+        <!-- Schedule Calendar Client Action -->
+        <record id="action_schedule_fullcalendar_view" model="ir.actions.client">
+            <field name="name">Schedule Calendar</field>
+            <field name="tag">rich_production.schedule_calendar_action</field>
+        </record>
+
+        <!-- Delivery Calendar Client Action -->
+        <record id="action_delivery_fullcalendar_view" model="ir.actions.client">
+            <field name="name">Delivery Calendar</field>
+            <field name="tag">rich_production.delivery_calendar_action</field>
+        </record>
     </data>
 </odoo> 
