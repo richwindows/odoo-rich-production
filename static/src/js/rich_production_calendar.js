@@ -40,98 +40,82 @@ class FullCalendarView extends Component {
     }
 
     _initCalendar() {
-        if (typeof FullCalendar === 'undefined' || !this.calendarRef.el) {
-            console.error("Cannot initialize Calendar: FullCalendar library or target element missing.");
+        if (!this.calendarRef.el) {
+            console.error('Calendar DOM element not found!');
             return;
         }
         
-        const self = this; // Maintain reference if needed inside callbacks
+        // 配置FullCalendar
         this.calendar = new FullCalendar.Calendar(this.calendarRef.el, {
+            // 设置初始视图和导航
             initialView: 'dayGridMonth',
+            navLinks: true,
+            editable: false, // 禁用拖放
+            selectable: true, // 允许选择日期范围
+            // 设置日历的外观样式
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,dayGridWeek,listWeek'
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
             },
-            height: 'auto', // 使用自动高度
-            contentHeight: 'auto', // 内容高度自动
-            aspectRatio: 1.1, // 进一步降低比例，让格子更高
-            handleWindowResize: true, // 自动处理窗口大小变化
-            timeZone: 'local', // 使用本地时区，不做UTC转换
-            fixedWeekCount: false, // 不固定显示6周，只显示当前月的实际周数
-            showNonCurrentDates: false, // 不显示非当前月的日期
-            buttonText: { today: 'Today', month: 'Month', week: 'Week', list: 'List' },
-            firstDay: 1,
-            weekNumbers: true,
-            navLinks: true,
-            editable: true,
-            dayMaxEvents: 6, // 增加每天显示的事件数量
-            moreLinkClick: 'popover', // 点击"+更多"时显示弹窗
-            eventTimeFormat: { hour: '2-digit', minute: '2-digit', meridiem: false, hour12: false },
-            events: this.state.events, // Initially bind to state
-            eventClick: (info) => this._openEventForm(info.event),
-            eventDrop: (info) => this._updateEventDates(info.event),
-            eventResize: (info) => this._updateEventDates(info.event),
-            dateClick: (info) => this._createNewProductionOnDate(info.date),
-            eventDidMount: (info) => this._enhanceEventDisplay(info.el, info.event),
-            loading: (isLoading) => console.log(isLoading ? "Calendar loading..." : "Calendar loaded."),
-            // 视图特定设置
-            views: {
-                dayGridMonth: {
-                    dayMaxEvents: 6,
-                    expandRows: true, // 扩展行高度以填满可用空间
-                },
-                dayGridWeek: {
-                    height: 'auto',
-                    contentHeight: 'auto',
-                    dayMaxEvents: false, // 周视图不限制事件数量
-                    expandRows: true, // 扩展行高度以填满可用空间
-                    stickyHeaderDates: false // 禁用粘性头部以避免滚动问题
-                }
+            // 设置日历本地化
+            locale: 'zh-cn', // 使用中文
+            firstDay: 1, // 周一开始
+            // 事件处理
+            events: this.state.events,
+            dayMaxEvents: false, // 不限制每天的事件数量，允许正常显示而非"+更多"
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                meridiem: false
             },
-            datesSet: (info) => {
-                // 当视图变化时调整容器和滚动行为
-                setTimeout(() => {
-                    const isWeekView = info.view.type === 'dayGridWeek';
-                    const isMonthView = info.view.type === 'dayGridMonth';
-                    const container = this.calendarRef.el.closest('.o_fullcalendar_container');
-                    const calendarView = container?.querySelector('.o_fullcalendar_view');
-                    
-                    if (container) {
-                        if (isWeekView) {
-                            container.style.height = 'calc(100vh - 80px)';
-                        } else if (isMonthView) {
-                            // 月视图设置更大高度并启用滚动
-                            container.style.height = 'auto';
-                            container.style.minHeight = 'calc(100vh - 120px)';
-                            if (calendarView) {
-                                calendarView.style.overflowY = 'auto';
-                            }
-                        } else {
-                            container.style.height = '100%';
-                        }
-                    }
-                }, 100);
-            }
+            // 增大事件高度
+            contentHeight: 'auto',
+            eventDisplay: 'block', // 使用块状显示，占用更多空间
+            eventMinHeight: 50, // 设置事件最小高度
+            // 事件点击和渲染处理
+            eventClick: (info) => {
+                this._openEventForm(info.event);
+            },
+            eventDidMount: (info) => {
+                this._enhanceEventDisplay(info.el, info.event);
+            },
+            dateClick: (info) => this._createNewProductionOnDate(info.date)
         });
-
+        
         this.calendar.render();
-        console.log("FullCalendar rendered using Owl component.");
     }
 
     async _loadEvents() {
         try {
+            // Request minimal fields first to isolate the error
             const records = await this.orm.searchRead(
                 'rich_production.production',
                 [], // domain
-                ['name', 'batch', 'batch_number', 'customer_id', 'start_date', 'stop_date', 'color', 'notes', 'invoice_ids', 'total_items']
+                // Minimal fields:
+                ['name', 'batch', 'batch_number', 'start_date', 'stop_date']
             );
-            const events = this._formatEvents(records);
+
+            // Add defaults for fields used later, even if not fetched initially
+            const formattedRecords = records.map(record => {
+                return {
+                    ...record,
+                    customer_id: record.customer_id || null, // Default if not fetched
+                    user_id: record.user_id || null,       // Default if not fetched
+                    state: record.state || 'draft',       // Default if not fetched
+                    notes: record.notes || '',           // Default if not fetched
+                    total_items: record.total_items || 0,
+                    color: record.color || null,
+                    invoice_ids: record.invoice_ids || []
+                };
+            });
+
+            const events = this._formatEvents(formattedRecords);
             this.state.events = events; // Update component state
             if (this.calendar) {
                 this.calendar.removeAllEvents();
                 this.calendar.addEventSource(events);
-                console.log(`Loaded ${events.length} events via ORM service.`);
+                console.log(`Loaded ${events.length} events via ORM service (Minimal Fields).`);
             }
         } catch (error) {
             console.error("Error loading events via ORM service:", error);
@@ -140,9 +124,8 @@ class FullCalendarView extends Component {
     }
     
     _formatEvents(records) {
-        // 使用本地日期，避免时区转换问题
         return records.map(record => {
-            // 创建本地日期，确保日期显示在正确的格子上
+            // 创建本地日期，避免时区转换问题
             const createLocalDate = (dateString) => {
                 if (!dateString) return null;
                 
@@ -162,14 +145,37 @@ class FullCalendarView extends Component {
             const startDate = record.start_date ? createLocalDate(record.start_date) : null;
             const endDate = record.stop_date ? createLocalDate(record.stop_date) : null;
             const customerName = record.customer_id ? record.customer_id[1] : '';
+            const userName = record.user_id ? record.user_id[1] : '';
 
             if (!startDate) {
                 console.warn(`Record ID ${record.id} has invalid start date: ${record.start_date}`);
                 return null;
             }
             
-            // 只使用批次号作为标题，不添加任何前缀
-            const title = record.batch_number || record.name || 'Unnamed Production';
+            // 设置标题为批次号和批次名称
+            let title = '';
+            if (record.batch_number) {
+                title = record.batch_number;
+                if (record.batch) {
+                    title += ` (${record.batch})`;
+                }
+            } else if (record.batch) {
+                title = record.batch;
+            } else {
+                title = 'Production ' + record.id;
+            }
+            
+            // 自定义一下颜色，根据不同状态展示不同颜色
+            let backgroundColor = '#3498db'; // 默认蓝色
+            if (record.color) {
+                backgroundColor = record.color;
+            } else if (record.state === 'cancel') {
+                backgroundColor = '#7f8c8d'; // 取消 - 灰色
+            } else if (record.state === 'done') {
+                backgroundColor = '#2ecc71'; // 完成 - 绿色
+            } else if (record.state === 'draft') {
+                backgroundColor = '#e74c3c'; // 草稿 - 红色
+            }
             
             return {
                 id: record.id,
@@ -177,14 +183,17 @@ class FullCalendarView extends Component {
                 start: startDate,
                 end: endDate,
                 allDay: true, // 全天事件
-                backgroundColor: record.color || '#3788d8',
-                borderColor: record.color || '#3788d8',
+                backgroundColor: backgroundColor,
+                borderColor: backgroundColor,
                 extendedProps: {
                     batch: record.batch || '',
                     batch_number: record.batch_number || '',
                     customer: customerName,
                     notes: record.notes || '',
-                    record_id: record.id
+                    record_id: record.id,
+                    responsible: userName,
+                    total_items: record.total_items || 0,
+                    state: record.state || 'draft'
                 }
             };
         }).filter(event => event !== null);
@@ -194,47 +203,119 @@ class FullCalendarView extends Component {
         if (!event.extendedProps) return;
 
         const batch = event.extendedProps.batch;
+        const batch_number = event.extendedProps.batch_number;
         const customer = event.extendedProps.customer;
+        const responsible = event.extendedProps.responsible;
         const total_items = event.extendedProps.total_items;
-        const invoiceCount = event.extendedProps.invoice_ids ? event.extendedProps.invoice_ids.length : 0;
+        const state = event.extendedProps.state;
 
-        const infoContainer = document.createElement('div');
-        infoContainer.className = 'fc-event-extra-info text-xs opacity-90 mt-1';
-
-        // 不再显示批次号，因为已经作为标题显示了
-        // 仅显示其他附加信息
-
-        if (batch) {
-            const batchEl = document.createElement('div');
-            batchEl.textContent = `批次: ${batch}`;
-            infoContainer.appendChild(batchEl);
-        }
-
-        if (customer) {
-            const customerEl = document.createElement('div');
-            customerEl.textContent = `客户: ${customer}`;
-            infoContainer.appendChild(customerEl);
-        }
-
-        if (total_items) {
-            const itemsEl = document.createElement('div');
-            itemsEl.textContent = `总数量: ${total_items}`;
-            infoContainer.appendChild(itemsEl);
-        }
-
-        if (invoiceCount > 0) {
-            const invoicesEl = document.createElement('div');
-            invoicesEl.textContent = `发票数: ${invoiceCount}`;
-            infoContainer.appendChild(invoicesEl);
-        }
-
-        const titleContainer = eventEl.querySelector('.fc-event-title-container') || eventEl.querySelector('.fc-event-main');
-        if (titleContainer && infoContainer.children.length > 0) {
-            titleContainer.appendChild(infoContainer);
+        // 创建一个包含更多信息的tooltip内容
+        let tooltipContent = `<strong>${event.title}</strong>`;
+        if (batch_number) tooltipContent += `<br>批次号: ${batch_number}`;
+        if (batch) tooltipContent += `<br>批次: ${batch}`;
+        if (customer) tooltipContent += `<br>客户: ${customer}`;
+        if (responsible) tooltipContent += `<br>负责人: ${responsible}`;
+        if (total_items) tooltipContent += `<br>数量: ${total_items}`;
+        if (state) {
+            let stateText = '';
+            switch(state) {
+                case 'draft': stateText = '草稿'; break;
+                case 'progress': stateText = '进行中'; break;
+                case 'done': stateText = '完成'; break;
+                case 'cancel': stateText = '取消'; break;
+                default: stateText = state;
+            }
+            tooltipContent += `<br>状态: ${stateText}`;
         }
         
-        if (event.extendedProps.notes) {
-            eventEl.setAttribute('title', event.extendedProps.notes);
+        // 尝试初始化tooltip (如果jQuery和Bootstrap可用)
+        if (typeof $ !== 'undefined' && $.fn.tooltip) {
+            $(eventEl).tooltip({
+                title: tooltipContent,
+                html: true,
+                container: 'body'
+            });
+        }
+
+        // 添加额外的CSS类和自定义内容
+        eventEl.classList.add('rich-calendar-event');
+        
+        // 为事件创建一个更丰富的内容结构
+        const eventContent = eventEl.querySelector('.fc-event-title-container') || eventEl.querySelector('.fc-event-main');
+        if (eventContent) {
+            // 清除现有内容
+            const title = eventContent.querySelector('.fc-event-title')?.textContent || '';
+            eventContent.innerHTML = '';
+            
+            // 创建标题
+            const titleEl = document.createElement('div');
+            titleEl.className = 'fc-event-title fw-bold fs-6';
+            titleEl.textContent = title;
+            eventContent.appendChild(titleEl);
+            
+            // 创建批次信息
+            if (batch) {
+                const batchEl = document.createElement('div');
+                batchEl.className = 'fc-event-batch';
+                batchEl.textContent = `批次: ${batch}`;
+                eventContent.appendChild(batchEl);
+            }
+            
+            // 创建客户信息
+            if (customer) {
+                const customerEl = document.createElement('div');
+                customerEl.className = 'fc-event-customer';
+                customerEl.textContent = `客户: ${customer}`;
+                eventContent.appendChild(customerEl);
+            }
+            
+            // 添加产品数量
+            if (total_items) {
+                const itemsEl = document.createElement('div');
+                itemsEl.className = 'fc-event-items';
+                itemsEl.textContent = `数量: ${total_items}`;
+                eventContent.appendChild(itemsEl);
+            }
+            
+            // 添加负责人信息
+            if (responsible) {
+                const respEl = document.createElement('div');
+                respEl.className = 'fc-event-responsible mt-1';
+                respEl.textContent = `负责人: ${responsible}`;
+                eventContent.appendChild(respEl);
+            }
+            
+            // 添加状态信息
+            if (state) {
+                let stateText = '';
+                let stateClass = '';
+                
+                switch(state) {
+                    case 'draft': 
+                        stateText = '草稿'; 
+                        stateClass = 'text-danger';
+                        break;
+                    case 'progress': 
+                        stateText = '进行中'; 
+                        stateClass = 'text-primary';
+                        break;
+                    case 'done': 
+                        stateText = '完成'; 
+                        stateClass = 'text-success';
+                        break;
+                    case 'cancel': 
+                        stateText = '取消'; 
+                        stateClass = 'text-secondary';
+                        break;
+                    default: 
+                        stateText = state;
+                }
+                
+                const stateEl = document.createElement('div');
+                stateEl.className = `fc-event-state ${stateClass} mt-1`;
+                stateEl.textContent = `状态: ${stateText}`;
+                eventContent.appendChild(stateEl);
+            }
         }
     }
 
