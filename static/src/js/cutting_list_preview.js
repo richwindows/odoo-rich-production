@@ -7,21 +7,43 @@ import { download } from "@web/core/network/download";
 
 class CuttingListPreview extends Component {
     setup() {
-        // 获取生产ID - 尝试多种方式
+        // 记录原始props以便调试
+        console.log("原始完整props:", this.props);
+        
+        // 初始化params对象，确保安全
+        const props = this.props || {};
+        const params = props.params || {};
+        
+        // 从多个位置获取productionId（添加空值检查）
         let productionId = null;
         
-        // 记录所有相关信息用于调试
-        console.log("Props:", this.props);
-        if (this.env.services.action && this.env.services.action.currentController) {
-            console.log("Context:", this.env.services.action.currentController.props.context);
-            console.log("Action:", this.env.services.action.currentController.props.action);
+        // 1. 直接从props.productionId获取
+        if (props.productionId) {
+            productionId = props.productionId;
+            console.log("1. 从props.productionId获取到值:", productionId);
         }
+        // 2. 从props.action.productionId获取
+        else if (props.action && props.action.productionId) {
+            productionId = props.action.productionId;
+            console.log("2. 从props.action.productionId获取到值:", productionId);
+        }
+        // 3. 从params获取
+        else if (params.productionId) {
+            productionId = params.productionId;
+            console.log("3. 从params.productionId获取到值:", productionId);
+        }
+        // 4. 从props.action.params获取
+        else if (props.action && props.action.params && props.action.params.productionId) {
+            productionId = props.action.params.productionId;
+            console.log("4. 从props.action.params.productionId获取到值:", productionId);
+        }
+        
+        // 记录所有相关信息用于调试
         console.log("完整env:", this.env);
         
         // 1. 从props中获取
         if (this.props.productionId) {
-            productionId = parseInt(this.props.productionId, 10);
-            console.log("从props获取productionId:", productionId);
+            console.log("从props获取productionId:", this.props.productionId);
         }
         // 2. 从上下文中获取
         else if (this.env.services.action && this.env.services.action.currentController) {
@@ -29,19 +51,16 @@ class CuttingListPreview extends Component {
             console.log("完整context:", context);
             
             if (context.active_id) {
-                productionId = parseInt(context.active_id, 10);
-                console.log("从context.active_id获取productionId:", productionId);
+                console.log("从context.active_id获取productionId:", context.active_id);
             }
             else if (context.production_id) {
-                productionId = parseInt(context.production_id, 10);
-                console.log("从context.production_id获取productionId:", productionId);
+                console.log("从context.production_id获取productionId:", context.production_id);
             }
             // 尝试从context中的任何可能的id字段获取
             else {
                 for (const key in context) {
                     if (key.endsWith('_id') && !isNaN(parseInt(context[key], 10))) {
-                        productionId = parseInt(context[key], 10);
-                        console.log(`从context.${key}获取productionId:`, productionId);
+                        console.log(`从context.${key}获取productionId:`, context[key]);
                         break;
                     }
                 }
@@ -54,8 +73,7 @@ class CuttingListPreview extends Component {
             console.log("完整params:", params);
             
             if (params.productionId) {
-                productionId = parseInt(params.productionId, 10);
-                console.log("从params.productionId获取productionId:", productionId);
+                console.log("从params.productionId获取productionId:", params.productionId);
             }
         }
         
@@ -69,16 +87,14 @@ class CuttingListPreview extends Component {
                 const activeIdParam = url.searchParams.get('active_id');
                 
                 if (activeModelParam === 'rich_production.production' && activeIdParam) {
-                    productionId = parseInt(activeIdParam, 10);
-                    console.log("从URL参数获取productionId:", productionId);
+                    console.log("从URL参数获取productionId:", activeIdParam);
                 }
                 
                 // 尝试从URL中找到任何可能的ID参数
                 if (!productionId) {
                     for (const [key, value] of url.searchParams.entries()) {
                         if (key.endsWith('_id') && !isNaN(parseInt(value, 10))) {
-                            productionId = parseInt(value, 10);
-                            console.log(`从URL参数${key}获取productionId:`, productionId);
+                            console.log(`从URL参数${key}获取productionId:`, value);
                             break;
                         }
                     }
@@ -96,18 +112,8 @@ class CuttingListPreview extends Component {
                 console.log("Odoo全局上下文:", odooContext);
                 
                 if (odooContext.active_model === 'rich_production.production' && odooContext.active_id) {
-                    productionId = parseInt(odooContext.active_id, 10);
-                    console.log("从odoo全局上下文获取productionId:", productionId);
+                    console.log("从odoo全局上下文获取productionId:", odooContext.active_id);
                 }
-            }
-        }
-        
-        // 6. 尝试从localStorage中获取临时保存的ID
-        if (!productionId) {
-            const savedId = localStorage.getItem('rich_production_current_id');
-            if (savedId) {
-                productionId = parseInt(savedId, 10);
-                console.log("从localStorage获取productionId:", productionId);
             }
         }
         
@@ -142,8 +148,6 @@ class CuttingListPreview extends Component {
                     if (productions && productions.length > 0) {
                         this.state.productionId = productions[0].id;
                         console.log("获取到最新的生产记录ID:", this.state.productionId);
-                        // 保存到localStorage备用
-                        localStorage.setItem('rich_production_current_id', this.state.productionId);
                     }
                 } catch (error) {
                     console.error("获取生产记录失败:", error);
@@ -605,6 +609,7 @@ class CuttingListPreview extends Component {
 CuttingListPreview.template = "rich_production.CuttingListPreview";
 CuttingListPreview.props = {
     productionId: { type: [Number, String, Boolean], optional: true },
+    params: { type: Object, optional: true },
 };
 
 // 注册为客户端动作

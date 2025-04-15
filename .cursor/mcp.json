@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+    "postgres": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://ubuntu:LcDD8r14@54.84.105.236:5432/odoo"]
+    }
+    }
+    }

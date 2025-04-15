@@ -30,132 +30,11 @@
                 <field name="name" string="Invoice Number"/>
                 <field name="partner_id" string="Customer"/>
                 <field name="invoice_date" string="Invoice Date"/>
+                
                 <field name="amount_total" string="Amount" sum="Total"/>
                 <field name="amount_untaxed" string="Untaxed" sum="Total Untaxed"/>
                 <field name="state" string="Status"/>
             </list>
-        </field>
-    </record>
-
-    <!-- 表单视图 -->
-    <record id="view_rich_production_form" model="ir.ui.view">
-        <field name="name">rich_production.production.form</field>
-        <field name="model">rich_production.production</field>
-        <field name="arch" type="xml">
-            <form class="o_form_full_width">
-                <header>
-                    <div class="float-right d-print-none">
-                        <button name="action_cutting_list" string="下料单" type="object" class="btn btn-primary" icon="fa-cut"/>
-                    </div>
-                </header>
-                <sheet class="oe_form_sheet_width_wider">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="oe_title">
-                                <h1>
-                                    <field name="name" placeholder="Production Name"/>
-                                </h1>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h3 class="mb-0">
-                                            <label for="batch_number" string="Batch No." class="oe_edit_only"/>
-                                            <field name="batch_number" placeholder="输入批次编号..." required="1"/>
-                                        </h3>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h4 class="mb-0 mt-2">
-                                            <label for="batch" string="Batch Name" class="oe_edit_only"/>
-                                            <field name="batch" placeholder="输入批次名称..." required="1"/>
-                                        </h4>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <group>
-                                <field name="capacity"/>
-                                <field name="total_items" readonly="1"/>
-                                <field name="customer_id"/>
-                                <field name="user_id"/>
-                                <field name="color" widget="color_picker"/>
-                            </group>
-                        </div>
-                        <div class="col-md-6">
-                            <group>
-                                <field name="production_date"/>
-                                <field name="start_date"/>
-                                <field name="stop_date"/>
-                                <field name="duration" string="Duration (Days)" readonly="1"/>
-                            </group>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <group string="Order Information">
-                                <field name="customer_id"/>
-                                <field name="total_items" readonly="1"/>
-                            </group>
-                        </div>
-                    </div>
-                    <notebook>
-                        <page string="Orders" name="orders">
-                            <field name="invoice_ids" widget="many2many" options="{'no_create': True}" context="{'list_view_ref': 'rich_production.view_invoice_list_embedded'}"/>
-                            <div class="row mt-3">
-                                <div class="col-md-6">
-                                    <group string="Order Information">
-                                        <field name="customer_id"/>
-                                        <field name="total_items" readonly="1"/>
-                                    </group>
-                                </div>
-                            </div>
-                        </page>
-                        <page string="Product Details" name="products">
-                            <div class="oe_button_box" name="products_button_box">
-                                <button name="action_refresh_product_lines" type="object" 
-                                        string="刷新产品明细" class="btn btn-secondary"
-                                        help="从关联的发票重新加载产品明细行" />
-                                <button name="action_force_save_lines_sql" type="object" 
-                                        string="直接SQL保存" class="btn btn-danger"
-                                        help="通过直接SQL操作保存产品明细行" />
-                                <button name="action_inspect_invoice_fields" type="object" 
-                                        string="检查发票字段" class="btn btn-info"
-                                        help="检查发票行项目的字段，帮助诊断映射问题" />
-                            </div>
-                            <field name="product_line_ids" class="o_list_view_extended" widget="one2many" mode="tree,form" options="{'reload_on_button': true}">
-                                <list editable="bottom">
-                                    <field name="product_id"/>
-                                    <field name="display_name"/>
-                                    <field name="quantity"/>
-                                    <field name="uom_id"/>
-                                    <field name="width" string="Width"/>
-                                    <field name="height" string="Height"/>
-                                    <field name="frame" string="Frame"/>
-                                    <field name="glass" string="Glass"/>
-                                    <field name="color" string="Color"/>
-                                    <field name="grid" string="Grid"/>
-                                    <field name="argon" string="Argon"/>
-                                    <field name="unit_price" sum="Total"/>
-                                    <field name="amount" sum="Total"/>
-                                    <field name="invoice_name"/>
-                                </list>
-                            </field>
-                        </page>
-                        <page string="Notes" name="notes">
-                            <field name="notes" placeholder="Enter notes here..."/>
-                        </page>
-                        <page string="Description" name="description">
-                            <field name="description" placeholder="Enter additional description here..."/>
-                        </page>
-                    </notebook>
-                </sheet>
-                <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="activity_ids"/>
-                    <field name="message_ids"/>
-                </div>
-            </form>
         </field>
     </record>
 
@@ -185,61 +64,92 @@
         </field>
     </record>
     
-    <!-- 裁剪清单表单视图 -->
-    <record id="view_rich_production_cutting_form" model="ir.ui.view">
-        <field name="name">rich_production.production.cutting.form</field>
+    <!-- 主表单视图 -->
+    <record id="view_rich_production_form" model="ir.ui.view">
+        <field name="name">rich_production.production.form</field>
         <field name="model">rich_production.production</field>
         <field name="arch" type="xml">
             <form string="Cutting List" create="true" edit="true">
+                <style>
+                    .o_list_view_full_width {
+                        width: 100% !important;
+                        margin-left: 0 !important;
+                        margin-right: 0 !important;
+                    }
+                    .o_list_view_compact th {
+                        padding: 5px 4px !important;
+                    }
+                    .o_list_view_compact td {
+                        padding: 5px 4px !important;
+                    }
+                    .o_horizontal_separator {
+                        font-size: 16px;
+                        font-weight: bold;
+                        color: #666;
+                    }
+                    .progress {
+                        background-color: #e9ecef;
+                        border-radius: 0.25rem;
+                    }
+                    .progress-bar {
+                        background-color: #28a745;
+                    }
+                    .item-stats {
+                        font-size: 16px;
+                        font-weight: bold;
+                    }
+                </style>
                 <sheet class="oe_form_sheet_width_wider">
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="oe_button_box" name="button_box" style="text-align: right; margin-bottom: 10px;">
-                                <button name="action_print_cutting_list" type="object" class="oe_stat_button" icon="fa-print">
-                                    <div class="o_field_widget o_stat_info">
-                                        <span class="o_stat_text">打印下料单</span>
-                                    </div>
-                                </button>
+                    <div class="oe_button_box" name="button_box" style="text-align: right; margin-bottom: 10px;">
+                        <button name="action_print_cutting_list" type="object" class="oe_stat_button" icon="fa-print">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Print Cutting List</span>
                             </div>
-                        </div>
+                        </button>
                     </div>
                     <field name="name" invisible="1" required="1" />
-                    <group>
-                        <group>
-                            <field name="batch_number" placeholder="输入批次编号..."/>
-                            <field name="capacity"/>
-                        </group>
-                        <group>
-                            <field name="production_date" readonly="1"/>
-                        </group>
-                    </group>
-                    <group string="选择订单">
+                    <div class="d-flex align-items-center mb-3">
+                        <label for="batch_number" string="Batch No." class="mr-1 mb-0" style="min-width: 80px; font-weight: bold;"/>
+                        <field name="batch_number" placeholder="Please enter batch number" class="mr-3" nolabel="1"/>
+                        <label for="capacity" string="Capacity" class="mr-1 mb-0" style="min-width: 80px; font-weight: bold;"/>  
+                        <field name="capacity" style="width: 80px;" class="mr-3" nolabel="1"/>
+                        <label for="production_date" string="Production Date" class="mr-1 mb-0" style="min-width: 110px; font-weight: bold;"/>
+                        <field name="production_date" readonly="1" nolabel="1"/>
+                    </div>
+                    <group string="Select Orders">
                         <field name="invoice_ids" widget="many2many" options="{'no_create': True}" context="{'list_view_ref': 'rich_production.view_invoice_list_embedded'}" nolabel="1"/>
                     </group>
-                    <group string="Product Details">
-                        <field name="product_line_ids" nolabel="1" readonly="1">
-                            <list>
-                                <field name="display_name"/>
-                                <field name="quantity"/>
-                                <field name="uom_id"/>
-                                <field name="width"/>
-                                <field name="height"/>
-                                <field name="frame"/>
-                                <field name="glass"/>
-                                <field name="color"/>
-                                <field name="grid"/>
-                                <field name="argon"/>
-                                <field name="unit_price"/>
-                                <field name="invoice_name"/>
-                            </list>
-                        </field>
-                    </group>
+                    
+                    <div class="o_horizontal_separator mt16 mb16">Product Details</div>
+                    <field name="product_line_ids" readonly="1" nolabel="1" class="o_list_view_full_width">
+                        <list editable="bottom" class="o_list_view_compact">
+                            <field name="product_id"/>
+                            
+                            <field name="uom_id"/>
+                            <field name="width"/>
+                            <field name="height"/>
+                            <field name="frame"/>
+                            <field name="glass"/>
+                            <field name="color"/>
+                            <field name="grid"/>
+                            <field name="grid_size"/>
+                            <field name="fixed_height_position"/>
+                            <field name="fixed_height"/>
+                            <field name="argon"/>
+                            <field name="trim"/>
+                            <field name="note"/>
+                            <field name="unit_price" sum="总价"/>
+                            <field name="quantity" sum="总数量"/>
+                            <field name="amount" sum="总金额"/>
+                            <field name="invoice_name"/>
+                        </list>
+                    </field>
+                    
                     <group string="Notes">
                         <field name="notes" placeholder="Enter notes here..." nolabel="1"/>
                     </group>
                 </sheet>
                 <footer>
-                    <button string="Print" name="action_print_cutting_list" type="object" class="btn-primary"/>
                     <button string="Close" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>
@@ -282,10 +192,16 @@
         <field name="name">rich_production.production.schedule.calendar</field>
         <field name="model">rich_production.production</field>
         <field name="arch" type="xml">
-            <calendar string="Production Schedule" date_start="start_date" date_stop="stop_date" color="color" quick_create="false" form_view_id="view_rich_production_form">
+            <calendar string="Production Schedule" 
+                    date_start="start_date" 
+                    date_stop="stop_date" 
+                    mode="month">
+                <field name="name"/>
                 <field name="batch_number"/>
                 <field name="total_items"/>
+                <field name="capacity"/>
                 <field name="customer_id"/>
+                <field name="batch"/>
             </calendar>
         </field>
     </record>

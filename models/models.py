@@ -17,6 +17,15 @@ class ProductionLine(models.Model):
     quantity = fields.Float(string='Quantity', required=True, default=1.0)
     uom_id = fields.Many2one('uom.uom', string='Unit of Measure')
     
+    # 状态字段
+    state = fields.Selection([
+        ('draft', '草稿'),
+        ('progress', '进行中'),
+        ('done', '完成'),
+        ('cancel', '取消')
+    ], string='状态', default='draft', required=True, tracking=True,
+        help="产品行状态")
+    
     # 发票相关字段
     invoice_id = fields.Many2one('account.move', string='Source Invoice', index=True)
     invoice_line_id = fields.Many2one('account.move.line', string='Invoice Line')
@@ -26,18 +35,41 @@ class ProductionLine(models.Model):
     display_name = fields.Char(string='Product', compute='_compute_display_name', store=True)
     invoice_name = fields.Char(string='Invoice Number', related='invoice_id.name', store=True)
     
-    # 尺寸信息
-    width = fields.Char(string='Width')
-    height = fields.Char(string='Height')
-    
-    # 材料信息
-    frame = fields.Char(string='Frame')
-    glass = fields.Char(string='Glass')
+    # 调整字段名称以匹配invoice line
+    window_width = fields.Char(string='Width')
+    window_height = fields.Char(string='Height')
+    frame_type = fields.Char(string='Frame')
+    glass_type = fields.Char(string='Glass')
     color = fields.Char(string='Color')
+    grid_type = fields.Char(string='Grid')
     
-    # 附加选项
-    grid = fields.Char(string='Grid')
-    argon = fields.Boolean(string='Argon', default=False)
+    # 保持兼容的别名字段
+    width = fields.Char(string='Width', related='window_width', store=True)
+    height = fields.Char(string='Height', related='window_height', store=True)
+    frame = fields.Char(string='Frame', related='frame_type', store=True)
+    glass = fields.Char(string='Glass', related='glass_type', store=True)
+    grid = fields.Char(string='Grid', related='grid_type', store=True)
+    
+    # 添加固定高度相关字段
+    fixed_height_position = fields.Char(string='Fixed Height Position')
+    fixed_height = fields.Char(string='Fixed Height')
+    
+    # 向后兼容
+    fh_position = fields.Char(string='FH Position', related='fixed_height_position', store=True)
+    fixed_type = fields.Char(string='Fixed Type', related='fixed_height', store=True)
+    
+    # 网格相关字段
+    grid_size = fields.Char(string='Grid Size')
+    
+    # Argon相关
+    argon = fields.Char(string='Argon')
+    
+    # 其他字段
+    trim = fields.Char(string='Trim')
+    note = fields.Text(string='Note')
+    
+    # 序列号用于排序
+    sequence = fields.Integer(string='Sequence', default=10)
     
     # 价格信息
     unit_price = fields.Float(string='Unit Price')

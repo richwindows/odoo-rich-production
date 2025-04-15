@@ -30,6 +30,7 @@
             'rich_production/static/src/js/rich_production_calendar.js',
             'rich_production/static/src/js/cutting_list_preview.js',
             'rich_production/static/src/xml/cutting_list_preview.xml',
+            'rich_production/static/src/css/rich_production.css',
         ],
     },
 }

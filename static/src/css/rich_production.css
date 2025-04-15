@@ -1,0 +1,58 @@
+/* 自定义日历事件样式 - 确保蓝色显示 */
+.o_calendar_container .fc-event,
+.o_calendar_container .fc-event-dot,
+.o_calendar_container .fc-event-handle,
+.fc-view-container .fc-event,
+.fc-view-container .fc-event-dot,
+.fc .fc-event,
+.fc-h-event,
+.fc-day-grid-event,
+.o_calendar_renderer .fc-event {
+    background-color: #0066cc !important; /* 深蓝色 */
+    border-color: #0066cc !important;
+    color: white !important;
+}
+
+/* 直接覆盖fullcalendar的样式 */
+.fc-day-grid-event.fc-h-event.fc-event {
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+    min-height: 40px !important;
+}
+
+/* 确保内容显示清晰 */
+.o_calendar_container .fc-event .fc-content,
+.o_calendar_container .fc-event .fc-time,
+.o_calendar_container .fc-event .fc-title,
+.fc-view-container .fc-event .fc-content,
+.fc-view-container .fc-event .fc-title,
+.fc-h-event .fc-content,
+.fc-h-event .fc-title {
+    color: white !important;
+    font-weight: normal;
+    text-shadow: 0 0 1px rgba(0,0,0,0.5); /* 添加轻微阴影提高可读性 */
+}
+
+/* 改进标题样式 */
+.o_calendar_container .fc-event .fc-title,
+.fc-view-container .fc-event .fc-title,
+.fc-event .fc-title {
+    font-weight: bold !important;
+    white-space: pre-line !important; /* 允许文本换行 */
+    padding: 4px !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+}
+
+/* 确保日历事件显示足够高度容纳多行文本 */
+.o_calendar_container .fc-event,
+.fc-view-container .fc-event,
+.fc-event {
+    min-height: 40px !important; 
+}
+
+/* 核心CSS优先级 - 用于覆盖内联样式 */
+.fc .fc-event.fc-event-forced-blue {
+    background-color: #0066cc !important;
+    border-color: #0066cc !important;
+} 

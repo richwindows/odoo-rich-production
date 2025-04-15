@@ -26,6 +26,15 @@ class Production(models.Model):
     user_id = fields.Many2one('res.users', string='Responsible', tracking=True, default=lambda self: self.env.user)
     color = fields.Integer(string='Color', default=0)
     
+    # 状态字段
+    state = fields.Selection([
+        ('draft', '草稿'),
+        ('progress', '进行中'),
+        ('done', '完成'),
+        ('cancel', '取消')
+    ], string='状态', default='draft', required=True, tracking=True,
+        help="批次状态")
+    
     # 批次信息
     batch = fields.Char(string='Batch')
     batch_number = fields.Char(string='Batch No.', tracking=True)
@@ -46,23 +55,34 @@ class Production(models.Model):
     batch_info = fields.Char(string='Batch Info', compute='_compute_batch_info', store=True)
     calendar_display = fields.Char(string='Calendar Display', compute='_compute_calendar_display', store=True)
     
+    # 日历显示字段
+    calendar_capacity_display = fields.Char(string='Capacity Display', compute='_compute_calendar_capacity_display', store=True)
+    
     # 产品明细行
     product_line_ids = fields.One2many('rich_production.line', 'production_id', 
                                        string='Product Lines', copy=True)
     
-    @api.depends('batch', 'batch_number', 'customer_id', 'total_items')
+    # 添加进度百分比字段
+    progress_percentage = fields.Integer(string='Progress', compute='_compute_progress_percentage', store=True)
+    completion_color = fields.Char(string='Completion Color', compute='_compute_completion_color', store=True)
+    
+    @api.depends('batch', 'batch_number', 'customer_id', 'total_items', 'capacity')
     def _compute_batch_info(self):
         for record in self:
             info = []
             if record.batch_number:
-                info.append(f"批次号: {record.batch_number}")
-            if record.batch:
-                info.append(f"批次: {record.batch}")
+                info.append(f"{record.batch_number}")
+            
+            # 添加总数/容量信息
+            if record.total_items is not None and record.capacity:
+                percentage = min(100, int((record.total_items * 100) / (record.capacity or 1)))
+                info.append(f"Items: {record.total_items}/{record.capacity} ({percentage}%)")
+            
+            # 添加客户信息
             if record.customer_id:
-                info.append(f"客户: {record.customer_id.name}")
-            if record.total_items:
-                info.append(f"数量: {record.total_items}")
-            record.batch_info = " | ".join(info) or "未指定批次"
+                info.append(f"Customer: {record.customer_id.name}")
+                
+            record.batch_info = "\n".join(info) or "未指定批次"
     
     @api.depends('invoice_ids')
     def _compute_total_items(self):
@@ -118,20 +138,34 @@ class Production(models.Model):
                 # 更新产品行 - 传递onchange上下文避免在onchange中执行SQL
                 record.with_context(onchange_self=True)._update_product_lines_from_invoices()
                 
-                # 更新名称 - 如果批次号存在，使用它作为名称的基础
-                if record.batch_number:
-                    # 如果有多个发票，添加计数信息
-                    if len(record.invoice_ids) > 1:
-                        record.name = f'批次 {record.batch_number} ({len(record.invoice_ids)} 个订单)'
-                    else:
-                        record.name = f'批次 {record.batch_number}'
-                elif record.batch:
-                    if len(record.invoice_ids) > 1:
-                        record.name = f'批次: {record.batch} ({len(record.invoice_ids)} 个订单)'
-                    else:
-                        record.name = f'批次: {record.batch}'
-                else:
-                    record.name = f'生产批次 ({len(record.invoice_ids)} 个订单)'
+                # 更新名称 - 使用更详细的格式
+                self._update_display_name()
+    
+    def _update_display_name(self):
+        """更新显示名称，确保在日历视图上显示完整信息"""
+        for record in self:
+            parts = []
+            # 添加批次号
+            if record.batch_number:
+                parts.append(f"{record.batch_number}")
+            
+            # 添加容量信息
+            if record.total_items is not None and record.capacity:
+                percentage = min(100, int((record.total_items * 100) / (record.capacity or 1)))
+                parts.append(f"{record.total_items}/{record.capacity} ({percentage}%)")
+            
+            # 添加客户信息
+            if record.customer_id:
+                parts.append(f"{record.customer_id.name}")
+                
+            if parts:
+                record.name = " | ".join(parts)
+            elif record.batch:
+                # 使用批次作为备选
+                record.name = f"批次: {record.batch}"
+            elif record.invoice_ids:
+                # 如果只有发票，使用发票数量
+                record.name = f"生产批次 ({len(record.invoice_ids)} 个订单)"
     
     def _update_product_lines_from_invoices(self):
         """从发票更新产品行数据 - 不清空现有行，采用更新或创建方式"""
@@ -164,19 +198,24 @@ class Production(models.Model):
                     'invoice_id': invoice.id,
                     'invoice_line_id': inv_line.id,
                     'production_id': self.id,
+                    'state': 'draft',  # 默认为草稿状态
                 }
                 
                 # 记录所有可能的字段映射 - 包含常见命名模式
                 field_mappings = {
-                    # 常见的Studio自定义字段
-                    'width': ['x_width', 'x_studio_width', 'width', 'window_width'],
-                    'height': ['x_height', 'x_studio_height', 'height', 'window_height'],
-                    'frame': ['x_frame', 'x_studio_frame', 'frame', 'frame_type'],
-                    'glass': ['x_glass', 'x_studio_glass', 'glass', 'glass_type'],
-                    'color': ['x_color', 'x_studio_color', 'color', 'color_type'],
-                    'grid': ['x_grid', 'x_studio_grid', 'grid', 'grid_type'],
-                    'argon': ['x_argon', 'x_studio_argon', 'argon', 'has_argon'],
-                    'notes': ['description', 'name', 'note', 'notes'],
+                    # 主字段 - 直接与invoice line匹配的字段
+                    'window_width': ['window_width', 'x_window_width', 'x_width', 'width'],
+                    'window_height': ['window_height', 'x_window_height', 'x_height', 'height'],
+                    'frame_type': ['frame_type', 'x_frame_type', 'x_frame', 'frame'],
+                    'glass_type': ['glass_type', 'x_glass_type', 'x_glass', 'glass'],
+                    'color': ['color', 'x_color', 'color_type'],
+                    'grid_type': ['grid_type', 'x_grid_type', 'x_grid', 'grid'],
+                    'grid_size': ['grid_size', 'x_grid_size', 'grid_details'],
+                    'argon': ['argon', 'x_argon', 'has_argon'],
+                    'fixed_height_position': ['fixed_height_position', 'x_fixed_height_position', 'fh_position', 'handle_position'],
+                    'fixed_height': ['fixed_height', 'x_fixed_height', 'fixed_type', 'fixation'],
+                    'trim': ['trim', 'x_trim', 'trim_type'],
+                    'note': ['note', 'x_note', 'comments', 'description'],
                     'unit_price': ['price_unit', 'unit_price'],
                     'amount': ['price_subtotal', 'amount_untaxed', 'amount'],
                 }
@@ -341,7 +380,7 @@ class Production(models.Model):
         }
         
     def action_print_cutting_list(self):
-        """打印裁剪清单 - 使用Owl客户端动作展示预览"""
+        """打印裁剪清单 - 直接传递参数而不使用localStorage"""
         self.ensure_one()
         
         # 获取当前上下文
@@ -353,22 +392,26 @@ class Production(models.Model):
             'production_id': self.id,
         })
         
-        # 返回客户端动作，使用额外的JS初始化代码
+        # 返回客户端动作，直接在顶级和params中都传递productionId
         return {
             'type': 'ir.actions.client',
             'tag': 'rich_production.cutting_list_preview',
+            'name': f'裁剪清单 #{self.id}',
+            'productionId': self.id,  # 作为顶级参数传递
             'params': {
                 'productionId': self.id,
             },
             'target': 'new',
             'context': ctx,
-            # 添加JS初始化代码，确保ID能够正确传递
-            'init_js': f"localStorage.setItem('rich_production_current_id', {self.id});"
         }
 
     def write(self, vals):
-        """覆盖写入方法，确保产品行数据正确保存"""
+        """覆盖写入方法，确保产品行数据正确保存和名称更新"""
         result = super(Production, self).write(vals)
+        
+        # 如果相关字段变化，更新name字段
+        if any(field in vals for field in ['batch_number', 'total_items', 'capacity', 'customer_id']):
+            self._update_display_name()
         
         # 在写入完成后，如果更新了发票，则同步更新产品行
         if 'invoice_ids' in vals and self.invoice_ids:
@@ -392,8 +435,11 @@ class Production(models.Model):
         
     @api.model
     def create(self, vals):
-        """覆盖创建方法，确保产品行数据正确保存"""
+        """覆盖创建方法，确保产品行数据正确保存和名称设置"""
         record = super(Production, self).create(vals)
+        
+        # 确保新记录有正确的显示名称
+        record._update_display_name()
         
         # 使用事务新建游标确保完全提交
         self.env.cr.commit()
@@ -550,4 +596,52 @@ class Production(models.Model):
             'type': 'ir.actions.act_url',
             'url': excel_url,
             'target': 'self',
-        } 
+        }
+
+    def action_set_draft(self):
+        """设置为草稿状态"""
+        return self.write({'state': 'draft'})
+    
+    def action_set_progress(self):
+        """设置为进行中状态"""
+        return self.write({'state': 'progress'})
+
+    def action_set_done(self):
+        """设置为完成状态"""
+        return self.write({'state': 'done'})
+    
+    def action_set_cancel(self):
+        """设置为取消状态"""
+        return self.write({'state': 'cancel'})
+
+    @api.depends('total_items', 'capacity')
+    def _compute_progress_percentage(self):
+        """计算完成百分比"""
+        for record in self:
+            if record.capacity and record.capacity > 0:
+                record.progress_percentage = min(100, int((record.total_items * 100) / record.capacity))
+            else:
+                record.progress_percentage = 0
+            
+    @api.depends('progress_percentage')
+    def _compute_completion_color(self):
+        """根据完成度设置颜色"""
+        for record in self:
+            if record.progress_percentage >= 100:
+                record.completion_color = 'success'  # 绿色
+            elif record.progress_percentage >= 75:
+                record.completion_color = 'warning'  # 黄色
+            elif record.progress_percentage >= 50:
+                record.completion_color = 'info'     # 蓝色
+            else:
+                record.completion_color = 'danger'   # 红色 
+
+    @api.depends('total_items', 'capacity')
+    def _compute_calendar_capacity_display(self):
+        """计算用于日历显示的capacity信息"""
+        for record in self:
+            if record.capacity and record.total_items is not None:
+                percentage = min(100, int((record.total_items * 100) / (record.capacity or 1)))
+                record.calendar_capacity_display = f"{record.total_items}/{record.capacity} ({percentage}%)"
+            else:
+                record.calendar_capacity_display = f"{record.total_items or 0} items" 
