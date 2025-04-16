@@ -1,23 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="rich_production.CuttingListPreview" owl="1">
-        <div class="o_cutting_list_preview">
+        <t t-set="state" t-value="{ activeTab: 'general-info', ...state }"/>
+        <div class="o_cutting_list_preview" t-on-component-mounted="() => { this.state.activeTab = 'general-info'; }">
             <div class="o_control_panel py-2 d-flex justify-content-between align-items-center">
-                <div class="o_cp_left">
-                    <h2>下料单预览</h2>
-                </div>
-                <div class="o_cp_right">
-                    <button class="btn btn-primary me-2" t-on-click="printPage">
-                        <i class="fa fa-print me-1"/>打印
+                <div class="o_cp_right ms-auto">
+                    <button class="btn btn-sm btn-primary me-1" t-on-click="printPage">
+                        <i class="fa fa-print me-1"/>Print
                     </button>
-                    <button class="btn btn-info me-2" t-on-click="downloadPdf">
-                        <i class="fa fa-file-pdf-o me-1"/>下载PDF
+                    <button class="btn btn-sm btn-info me-1" t-on-click="downloadPdf">
+                        <i class="fa fa-file-pdf-o me-1"/>Download PDF
                     </button>
-                    <button class="btn btn-success me-2" t-on-click="downloadExcel">
-                        <i class="fa fa-file-excel-o me-1"/>下载Excel
-                    </button>
-                    <button class="btn btn-secondary" t-on-click="close">
-                        <i class="fa fa-times me-1"/>关闭
+                    <button class="btn btn-sm btn-success me-1" t-on-click="downloadExcel">
+                        <i class="fa fa-file-excel-o me-1"/>Download Excel
                     </button>
                 </div>
             </div>
@@ -26,11 +21,79 @@
                 <t t-if="state.loading">
                     <div class="o_loading text-center p-5">
                         <i class="fa fa-spinner fa-spin fa-3x"/>
-                        <p class="mt-2">加载中...</p>
+                        <p class="mt-2">Loading...</p>
                     </div>
                 </t>
                 <t t-else="">
-                    <div class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                    <!-- Tab navigation buttons layout -->
+                    <div class="nav-tabs-container mb-3 d-flex justify-content-between align-items-center">
+                        <div class="nav-tabs-buttons text-start">
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'general-info' ? 'btn-success active-tab' : 'btn-outline-success'"
+                                t-on-click="() => this.state.activeTab = 'general-info'">
+                                Basic Information
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'material-list' ? 'btn-primary active-tab' : 'btn-outline-primary'"
+                                t-on-click="() => this.state.activeTab = 'material-list'">
+                                Detailed Material List
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'glass-order' ? 'btn-warning active-tab' : 'btn-outline-warning'"
+                                t-on-click="() => this.state.activeTab = 'glass-order'">
+                                Glass Order Details
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'frame' ? 'btn-info active-tab' : 'btn-outline-info'"
+                                t-on-click="() => this.state.activeTab = 'frame'">
+                                Frame
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'sash' ? 'btn-info active-tab' : 'btn-outline-info'"
+                                t-on-click="() => this.state.activeTab = 'sash'">
+                                Sash
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'glass' ? 'btn-info active-tab' : 'btn-outline-info'"
+                                t-on-click="() => this.state.activeTab = 'glass'">
+                                Glass
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Second row of tabs for additional tables -->
+                    <div class="nav-tabs-container mb-3 d-flex justify-content-start align-items-center">
+                        <div class="nav-tabs-buttons text-start">
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'order' ? 'btn-secondary active-tab' : 'btn-outline-secondary'"
+                                t-on-click="() => this.state.activeTab = 'order'">
+                                Order
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'screen' ? 'btn-secondary active-tab' : 'btn-outline-secondary'"
+                                t-on-click="() => this.state.activeTab = 'screen'">
+                                Screen
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'parts' ? 'btn-secondary active-tab' : 'btn-outline-secondary'"
+                                t-on-click="() => this.state.activeTab = 'parts'">
+                                Parts
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'grid' ? 'btn-secondary active-tab' : 'btn-outline-secondary'"
+                                t-on-click="() => this.state.activeTab = 'grid'">
+                                Grid
+                            </button>
+                            <button class="btn mx-1" 
+                                t-att-class="state.activeTab === 'label' ? 'btn-secondary active-tab' : 'btn-outline-secondary'"
+                                t-on-click="() => this.state.activeTab = 'label'">
+                                Label
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 基本信息表格区域 -->
+                    <div t-if="state.activeTab === 'general-info'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
                         <div class="header text-center mb-4">
                             <h2 style="font-size: 18px; font-weight: bold;">General Information</h2>
                         </div>
@@ -61,7 +124,7 @@
                                 <tbody>
                                     <t t-if="state.productLines.length === 0">
                                         <tr>
-                                            <td colspan="13" class="text-center">没有数据</td>
+                                            <td colspan="13" class="text-center">No data</td>
                                         </tr>
                                     </t>
                                     <t t-foreach="state.productLines" t-as="line" t-key="line.id">
@@ -85,12 +148,582 @@
                             </table>
                         </div>
                     </div>
+                    
+                    <!-- 详细材料清单表格区域 -->
+                    <div t-if="state.activeTab === 'material-list'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Detailed Material List</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Width</th>
+                                        <th>Height</th>
+                                        <th>Quantity</th>
+                                        <th>Material</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-if="state.productLines.length === 0">
+                                        <tr>
+                                            <td colspan="6" class="text-center">No data</td>
+                                        </tr>
+                                    </t>
+                                    <t t-foreach="state.productLines" t-as="line" t-key="line.id">
+                                        <!-- XO类型窗户 -->
+                                        <t t-if="line.style === 'XO'">
+                                            <tr style="background-color: #d6e4f0;">
+                                                <td colspan="6" class="text-center">
+                                                    <strong>Window <t t-esc="line.id"/> - <t t-esc="line.style"/> (<t t-esc="line.width"/>×<t t-esc="line.height"/>)</strong>
+                                                </td>
+                                            </tr>
+                                            <!-- 框架 -->
+                                            <tr>
+                                                <td>Frame</td>
+                                                <td t-esc="Math.round(((line.width * 1) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                                                <td t-esc="Math.round(((line.height * 1) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                                                <td>2</td>
+                                                <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                                <td>Main frame</td>
+                                            </tr>
+                                            <!-- 窗扇 -->
+                                            <tr>
+                                                <td>Sash</td>
+                                                <td t-esc="Math.round(((line.width * 1) * 25.4 / 2 - 14.5 - 15 + 1) / 25.4 * 1000) / 1000"/>
+                                                <td t-esc="Math.round(((line.height * 1) * 25.4 - 46 - 15 * 2 - 2 - 1) / 25.4 * 1000) / 1000"/>
+                                                <td>2</td>
+                                                <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                                <td>Movable part</td>
+                                            </tr>
+                                            <!-- 窗中梃 -->
+                                            <tr>
+                                                <td>Mullion</td>
+                                                <td>-</td>
+                                                <td t-esc="Math.round(((line.height * 1) * 25.4 - 36 - 15 * 2) / 25.4 * 1000) / 1000"/>
+                                                <td>1</td>
+                                                <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                                <td>Middle post</td>
+                                            </tr>
+                                            <!-- 纱窗 -->
+                                            <tr>
+                                                <td>Screen</td>
+                                                <td t-esc="Math.round((line.width * 1) * 25.4 / 2 - 75 - 15 - 2)"/>
+                                                <td t-esc="Math.round((line.height * 1) * 25.4 - 87 - 15 * 2 - 4)"/>
+                                                <td>2</td>
+                                                <td>Aluminum</td>
+                                                <td>Insect protection</td>
+                                            </tr>
+                                            <!-- 滑道 -->
+                                            <tr>
+                                                <td>Track</td>
+                                                <td t-esc="Math.round(((line.width * 1) * 25.4 - 14 * 2 - 15 * 2 - 3 - 20) / 25.4 * 10) / 10"/>
+                                                <td>-</td>
+                                                <td>1</td>
+                                                <td>Aluminum</td>
+                                                <td>Top/bottom track</td>
+                                            </tr>
+                                            <!-- 推拉窗扇玻璃 -->
+                                            <tr>
+                                                <td>Sliding Glass</td>
+                                                <td t-esc="Math.round((line.width * 1) * 25.4 / 2 - 77 - 15 + 3)"/>
+                                                <td t-esc="Math.round((line.height * 1) * 25.4 - 109 - 15 * 2 - 3 - 2)"/>
+                                                <td>2</td>
+                                                <td><t t-esc="line.glass || 'Clear'"/> <t t-if="line.argon">+ Argon</t></td>
+                                                <td>Movable section</td>
+                                            </tr>
+                                            <!-- 固定窗扇玻璃 -->
+                                            <tr>
+                                                <td>Fixed Glass</td>
+                                                <td t-esc="Math.round((line.width * 1) * 25.4 / 2 - 44 - 15)"/>
+                                                <td t-esc="Math.round((line.height * 1) * 25.4 - 47 - 15 * 2 - 2)"/>
+                                                <td>2</td>
+                                                <td><t t-esc="line.glass || 'Clear'"/> <t t-if="line.argon">+ Argon</t></td>
+                                                <td>Fixed section</td>
+                                            </tr>
+                                        </t>
+                                        <!-- OX类型窗户 -->
+                                        <t t-if="line.style === 'OX'">
+                                            <tr style="background-color: #d6e4f0;">
+                                                <td colspan="6" class="text-center">
+                                                    <strong>Window <t t-esc="line.id"/> - <t t-esc="line.style"/> (<t t-esc="line.width"/>×<t t-esc="line.height"/>)</strong>
+                                                </td>
+                                            </tr>
+                                            <!-- 框架 -->
+                                            <tr>
+                                                <td>Frame</td>
+                                                <td t-esc="Math.round(((line.width * 1) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                                                <td t-esc="Math.round(((line.height * 1) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                                                <td>2</td>
+                                                <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                                <td>Main frame</td>
+                                            </tr>
+                                            <!-- 窗扇 -->
+                                            <tr>
+                                                <td>Sash</td>
+                                                <td t-esc="Math.round(((line.width * 1) * 25.4 / 2 - 14.5 - 15 + 1) / 25.4 * 1000) / 1000"/>
+                                                <td t-esc="Math.round(((line.height * 1) * 25.4 - 46 - 15 * 2 - 2 - 1) / 25.4 * 1000) / 1000"/>
+                                                <td>2</td>
+                                                <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                                <td>Movable part</td>
+                                            </tr>
+                                            <!-- 窗中梃 -->
+                                            <tr>
+                                                <td>Mullion</td>
+                                                <td>-</td>
+                                                <td t-esc="Math.round(((line.height * 1) * 25.4 - 36 - 15 * 2) / 25.4 * 1000) / 1000"/>
+                                                <td>1</td>
+                                                <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                                <td>Middle post</td>
+                                            </tr>
+                                            <!-- 纱窗 -->
+                                            <tr>
+                                                <td>Screen</td>
+                                                <td t-esc="Math.round((line.width * 1) * 25.4 / 2 - 75 - 15 - 2)"/>
+                                                <td t-esc="Math.round((line.height * 1) * 25.4 - 87 - 15 * 2 - 4)"/>
+                                                <td>2</td>
+                                                <td>Aluminum</td>
+                                                <td>Insect protection</td>
+                                            </tr>
+                                            <!-- 滑道 -->
+                                            <tr>
+                                                <td>Track</td>
+                                                <td t-esc="Math.round(((line.width * 1) * 25.4 - 14 * 2 - 15 * 2 - 3 - 20) / 25.4 * 10) / 10"/>
+                                                <td>-</td>
+                                                <td>1</td>
+                                                <td>Aluminum</td>
+                                                <td>Top/bottom track</td>
+                                            </tr>
+                                            <!-- 推拉窗扇玻璃 -->
+                                            <tr>
+                                                <td>Sliding Glass</td>
+                                                <td t-esc="Math.round((line.width * 1) * 25.4 / 2 - 77 - 15 + 3)"/>
+                                                <td t-esc="Math.round((line.height * 1) * 25.4 - 109 - 15 * 2 - 3 - 2)"/>
+                                                <td>2</td>
+                                                <td><t t-esc="line.glass || 'Clear'"/> <t t-if="line.argon">+ Argon</t></td>
+                                                <td>Movable section</td>
+                                            </tr>
+                                            <!-- 固定窗扇玻璃 -->
+                                            <tr>
+                                                <td>Fixed Glass</td>
+                                                <td t-esc="Math.round((line.width * 1) * 25.4 / 2 - 44 - 15)"/>
+                                                <td t-esc="Math.round((line.height * 1) * 25.4 - 47 - 15 * 2 - 2)"/>
+                                                <td>2</td>
+                                                <td><t t-esc="line.glass || 'Clear'"/> <t t-if="line.argon">+ Argon</t></td>
+                                                <td>Fixed section</td>
+                                            </tr>
+                                        </t>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- 玻璃订单明细表格区域 -->
+                    <div t-if="state.activeTab === 'glass-order'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Glass Order Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Style</th>
+                                        <th>Width</th>
+                                        <th>Height</th>
+                                        <th>Batch No.</th>
+                                        <th>Item ID</th>
+                                        <th>Type</th>
+                                        <th>Quantity</th>
+                                        <th>Glass</th>
+                                        <th>Treatment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-if="state.productLines.length === 0">
+                                        <tr>
+                                            <td colspan="10" class="text-center">No data</td>
+                                        </tr>
+                                    </t>
+                                    <t t-foreach="state.productLines" t-as="line" t-key="line.id">
+                                        <tr>
+                                            <td><t t-esc="line.customer || ''"/></td>
+                                            <td><t t-esc="line.style || ''"/></td>
+                                            <td><t t-esc="line.width || ''"/></td>
+                                            <td><t t-esc="line.height || ''"/></td>
+                                            <td><t t-esc="state.batchNumber || ''"/></td>
+                                            <td><t t-esc="line.id || ''"/></td>
+                                            <td><t t-if="line.style == 'XO'">01</t><t t-if="line.style == 'OX'">01</t></td>
+                                            <td>2</td>
+                                            <td><t t-esc="line.glass || 'Clear'"/></td>
+                                            <td><t t-if="line.argon">Argon</t></td>
+                                        </tr>
+                                        <t t-if="line.style == 'XO'">
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td><t t-esc="state.batchNumber || ''"/></td>
+                                                <td><t t-esc="line.id || ''"/></td>
+                                                <td>02</td>
+                                                <td>2</td>
+                                                <td><t t-esc="line.glass || 'Clear'"/></td>
+                                                <td><t t-if="line.argon">Argon</t></td>
+                                            </tr>
+                                        </t>
+                                        <t t-if="line.style == 'OX'">
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td></td>
+                                                <td><t t-esc="state.batchNumber || ''"/></td>
+                                                <td><t t-esc="line.id || ''"/></td>
+                                                <td>02</td>
+                                                <td>2</td>
+                                                <td><t t-esc="line.glass || 'Clear'"/></td>
+                                                <td><t t-if="line.argon">Argon</t></td>
+                                            </tr>
+                                        </t>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Frame table -->
+                    <div t-if="state.activeTab === 'frame'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Frame Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Style</th>
+                                        <th>Retro H</th>
+                                        <th>Retro H Qty</th>
+                                        <th>Retro V</th>
+                                        <th>Retro V Qty</th>
+                                        <th>Nailon H</th>
+                                        <th>Nailon H Qty</th>
+                                        <th>Nailon V</th>
+                                        <th>Nailon V Qty</th>
+                                        <th>Block H</th>
+                                        <th>Block H Qty</th>
+                                        <th>Block V</th>
+                                        <th>Block V Qty</th>
+                                        <th>Color</th>
+                                        <th>ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="16" class="text-center">No data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Sash table -->
+                    <div t-if="state.activeTab === 'sash'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Sash Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Style</th>
+                                        <th>Slider H</th>
+                                        <th>Slider H Qty</th>
+                                        <th>Slider V</th>
+                                        <th>Slider V Qty</th>
+                                        <th>Handle</th>
+                                        <th>Handle Qty</th>
+                                        <th>SH H</th>
+                                        <th>SH H Qty</th>
+                                        <th>SH V</th>
+                                        <th>SH V Qty</th>
+                                        <th>Color</th>
+                                        <th>ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="14" class="text-center">No data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Glass table -->
+                    <div t-if="state.activeTab === 'glass'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Glass Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Style</th>
+                                        <th>Width</th>
+                                        <th>Height</th>
+                                        <th>FH</th>
+                                        <th>ID</th>
+                                        <th>Line</th>
+                                        <th>Quantity</th>
+                                        <th>Glass Type</th>
+                                        <th>A or T</th>
+                                        <th>Thickness</th>
+                                        <th>Width (mm)</th>
+                                        <th>Height (mm)</th>
+                                        <th>Grid</th>
+                                        <th>Argon</th>
+                                        <th>ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="16" class="text-center">No data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Order table -->
+                    <div t-if="state.activeTab === 'order'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Order Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Style</th>
+                                        <th>Width</th>
+                                        <th>Height</th>
+                                        <th>FH</th>
+                                        <th>ID</th>
+                                        <th>Line</th>
+                                        <th>Quantity</th>
+                                        <th>Glass Type</th>
+                                        <th>A or T</th>
+                                        <th>Thickness</th>
+                                        <th>Width (inch)</th>
+                                        <th>Height (inch)</th>
+                                        <th>Customer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="14" class="text-center">No data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Screen table -->
+                    <div t-if="state.activeTab === 'screen'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Screen Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>ID</th>
+                                        <th>Style</th>
+                                        <th>Screen H</th>
+                                        <th>Screen H Qty</th>
+                                        <th>Screen V</th>
+                                        <th>Screen V Qty</th>
+                                        <th>Color</th>
+                                        <th>ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="9" class="text-center">No data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Parts table -->
+                    <div t-if="state.activeTab === 'parts'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Parts Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Style</th>
+                                        <th>Mullion</th>
+                                        <th>Mullion A</th>
+                                        <th>Handle A</th>
+                                        <th>Quantity</th>
+                                        <th>Track</th>
+                                        <th>Cover H</th>
+                                        <th>Cover V</th>
+                                        <th>Big Mu1</th>
+                                        <th>Big Mu1 Qty</th>
+                                        <th>Big Mu2</th>
+                                        <th>Big Mu2 Qty</th>
+                                        <th>Slop</th>
+                                        <th>Color</th>
+                                        <th>ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="16" class="text-center">No data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Grid table -->
+                    <div t-if="state.activeTab === 'grid'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Grid Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Style</th>
+                                        <th>Grid</th>
+                                        <th>Sash W</th>
+                                        <th>Sash W Qty</th>
+                                        <th>Hole W1</th>
+                                        <th>Sash H</th>
+                                        <th>Sash H Qty</th>
+                                        <th>Hole H1</th>
+                                        <th>Fix W</th>
+                                        <th>Fix W Qty</th>
+                                        <th>Hole W2</th>
+                                        <th>Fix H</th>
+                                        <th>Fix H Qty</th>
+                                        <th>Hole H2</th>
+                                        <th>ID</th>
+                                        <th>Note</th>
+                                        <th>Color</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="18" class="text-center">No data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Label table -->
+                    <div t-if="state.activeTab === 'label'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 10mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-4">
+                            <h2 style="font-size: 18px; font-weight: bold;">Label Details</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-3" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>ID</th>
+                                        <th>Style</th>
+                                        <th>Space</th>
+                                        <th>Frame</th>
+                                        <th>Glass+Argon</th>
+                                        <th>Grid</th>
+                                        <th>PO</th>
+                                        <th>Batch NO</th>
+                                        <th>ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="10" class="text-center">No data</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </t>
             </div>
             
             <style>
                 @media print {
                     .o_control_panel { display: none !important; }
+                    .tabs { display: none !important; }
                     .o_content { padding: 0 !important; }
                     body { margin: 0; padding: 0; }
                     .cutting-list-container { 
@@ -99,10 +732,47 @@
                         box-shadow: none !important;
                         padding: 0 !important;
                     }
-                    table { page-break-inside: auto; }
+                    table { page-break-inside: auto; width: 100% !important; }
                     tr { page-break-inside: avoid; page-break-after: auto; }
                     thead { display: table-header-group; }
                     tfoot { display: table-footer-group; }
+                    
+                    /* 添加打印专用样式 */
+                    .cutting-list-container table th,
+                    .cutting-list-container table td {
+                        font-size: 9pt !important;
+                        padding: 2px !important;
+                    }
+                    
+                    .cutting-list-container .header h2 {
+                        font-size: 14pt !important;
+                        margin-bottom: 5mm !important;
+                    }
+                    
+                    .batch-info {
+                        font-size: 11pt !important;
+                        margin-bottom: 3mm !important;
+                    }
+                }
+                
+                /* 选项卡样式 */
+                .nav-tabs-container {
+                    margin-bottom: 20px;
+                }
+                
+                .nav-tabs-buttons {
+                    border-bottom: 1px solid #dee2e6;
+                    padding-bottom: 10px;
+                }
+                
+                .nav-tabs-buttons .btn {
+                    margin: 0 5px;
+                    min-width: 120px;
+                    font-weight: bold;
+                }
+                
+                .active-tab {
+                    box-shadow: 0 0 5px rgba(0,0,0,0.3);
                 }
                 
                 /* 增强表格样式 */
@@ -123,6 +793,19 @@
                 
                 .cutting-list-container table tr:nth-child(even) td {
                     background-color: #efefd5;
+                }
+                
+                /* 添加更好的表格响应式布局 */
+                .table-responsive {
+                    overflow-x: auto;
+                }
+                
+                @media screen and (max-width: 768px) {
+                    .cutting-list-container table th,
+                    .cutting-list-container table td {
+                        font-size: 11px;
+                        padding: 4px 2px;
+                    }
                 }
             </style>
         </div>

@@ -5,68 +5,28 @@
         <html>
             <head>
                 <title>Cutting List - <t t-esc="production.batch_number or ''"/></title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        margin: 20px;
-                    }
-                    .header {
-                        text-align: center;
-                        margin-bottom: 20px;
-                    }
-                    .batch-info {
-                        margin-bottom: 20px;
-                        font-size: 18px;
-                        font-weight: bold;
-                    }
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                    }
-                    th, td {
-                        border: 1px solid #ccc;
-                        padding: 8px;
-                        text-align: center;
-                    }
-                    th {
-                        background-color: #f2f2f2;
-                    }
-                    tr:nth-child(even) {
-                        background-color: #f5f5dc;
-                    }
-                    .controls {
-                        margin: 20px 0;
-                    }
-                    .button {
-                        display: inline-block;
-                        background-color: #4CAF50;
-                        color: white;
-                        padding: 8px 16px;
-                        text-decoration: none;
-                        margin-right: 10px;
-                        border-radius: 4px;
-                    }
-                    .excel-button {
-                        background-color: #2196F3;
-                    }
-                    .print-button {
-                        background-color: #ff9800;
-                    }
-                    @media print {
-                        .controls {
-                            display: none;
-                        }
-                    }
-                </style>
+                <t t-call="rich_production.cutting_list_style"/>
             </head>
             <body>
                 <div class="controls">
-                    <a href="#" onclick="window.print(); return false;" class="button print-button">打印此页</a>
+                    <a href="#" onclick="window.print(); return false;" class="button print-button">打印</a>
                     <a t-att-href="'/rich_production/print_pdf/%s' % report.id" class="button" target="_blank">下载PDF</a>
                     <a t-att-href="'/rich_production/download_excel/%s' % report.id" class="button excel-button">下载Excel</a>
                     <button onclick="window.close()" class="button" style="background-color: #f44336;">关闭</button>
                 </div>
                 
+                <!-- 添加表格切换导航 -->
+                <div class="tabs">
+                    <a href="#" onclick="showTab('general-info'); return false;" class="tab-button active-tab" id="general-tab" style="background-color: #4CAF50; color: white;">基本信息</a>
+                    <a href="#" onclick="showTab('material-list'); return false;" class="tab-button" id="material-tab" style="background-color: #2196F3; color: white;">详细材料清单</a>
+                    <a href="#" onclick="showTab('glass-order'); return false;" class="tab-button" id="glass-tab" style="background-color: #ff9800; color: white;">玻璃订单明细</a>
+                </div>
+                
+                <!-- 添加JavaScript切换功能 -->
+                <t t-call="rich_production.cutting_list_js"/>
+                
+                <!-- 基本信息表格区域 -->
+                <div id="general-info">
                 <div class="header">
                     <h1>General Information</h1>
                 </div>
@@ -75,44 +35,24 @@
                     Batch NO.: <t t-esc="production.batch_number or ''"/>
                 </div>
                 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Customer</th>
-                            <th>ID</th>
-                            <th>Style</th>
-                            <th>W</th>
-                            <th>H</th>
-                            <th>FH</th>
-                            <th>Frame</th>
-                            <th>Glass</th>
-                            <th>Argon</th>
-                            <th>Grid</th>
-                            <th>Color</th>
-                            <th>Note</th>
-                            <th>ID</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <t t-foreach="product_lines" t-as="line">
-                            <tr>
-                                <td><t t-esc="line['customer']"/></td>
-                                <td><t t-esc="line['id']"/></td>
-                                <td><t t-esc="line['style']"/></td>
-                                <td><t t-esc="line['width']"/></td>
-                                <td><t t-esc="line['height']"/></td>
-                                <td><t t-esc="line['fh']"/></td>
-                                <td><t t-esc="line['frame']"/></td>
-                                <td><t t-esc="line['glass']"/></td>
-                                <td><t t-esc="line['argon']"/></td>
-                                <td><t t-esc="line['grid']"/></td>
-                                <td><t t-esc="line['color']"/></td>
-                                <td><t t-esc="line['note']"/></td>
-                                <td><t t-esc="line['id']"/></td>
-                            </tr>
-                        </t>
-                    </tbody>
-                </table>
+                    <t t-call="rich_production.cutting_list_general_table"/>
+                </div>
+                
+                <!-- 详细材料清单表格区域 -->
+                <div id="material-list" style="display: none;">
+                    <div class="header" style="margin-top: 30px;">
+                        <h2>详细材料清单</h2>
+                    </div>
+                    <t t-call="rich_production.cutting_list_material_table"/>
+                </div>
+                
+                <!-- 玻璃订单明细表格区域 -->
+                <div id="glass-order" style="display: none;">
+                    <div class="header" style="margin-top: 30px;">
+                        <h2>玻璃订单明细</h2>
+                    </div>
+                    <t t-call="rich_production.cutting_list_glass_table"/>
+                </div>
             </body>
         </html>
     </template>
@@ -228,6 +168,247 @@
                                 </t>
                             </tbody>
                         </table>
+                        
+                        <!-- 详细计算结果表 -->
+                        <h2 class="text-center mt-4">详细材料清单</h2>
+                        <table class="table table-bordered table-sm">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>项目</th>
+                                    <th>宽度</th>
+                                    <th>高度</th>
+                                    <th>数量</th>
+                                    <th>材料</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 使用t-foreach遍历产品行，t-if根据样式使用不同计算 -->
+                                <t t-foreach="product_lines" t-as="line">
+                                    <!-- 窗框计算 -->
+                                    <t t-if="line.style == 'XO'">
+                                        <tr class="table-primary">
+                                            <td colspan="6" class="text-center">
+                                                <strong>窗户 <t t-esc="line.id"/> - <t t-esc="line.style"/> (<t t-esc="line.width"/>×<t t-esc="line.height"/>)</strong>
+                                            </td>
+                                        </tr>
+                                        <!-- 框架 -->
+                                        <tr>
+                                            <td>框架</td>
+                                            <td t-esc="Math.round((parseFloat(line.width) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                                            <td t-esc="Math.round((parseFloat(line.height) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                                            <td>2</td>
+                                            <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                            <td>主框架</td>
+                                        </tr>
+                                        <!-- 窗扇 -->
+                                        <tr>
+                                            <td>窗扇</td>
+                                            <td t-esc="Math.round((parseFloat(line.width) * 25.4 / 2 - 14.5 - 15 + 1) / 25.4 * 1000) / 1000"/>
+                                            <td t-esc="Math.round((parseFloat(line.height) * 25.4 - 46 - 15 * 2 - 2 - 1) / 25.4 * 1000) / 1000"/>
+                                            <td>2</td>
+                                            <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                            <td>可移动部分</td>
+                                        </tr>
+                                        <!-- 窗中梃 -->
+                                        <tr>
+                                            <td>窗中梃</td>
+                                            <td>-</td>
+                                            <td t-esc="Math.round((parseFloat(line.height) * 25.4 - 36 - 15 * 2) / 25.4 * 1000) / 1000"/>
+                                            <td>1</td>
+                                            <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                            <td>中间立柱</td>
+                                        </tr>
+                                        <!-- 纱窗 -->
+                                        <tr>
+                                            <td>纱窗</td>
+                                            <td t-esc="Math.round(parseFloat(line.width) * 25.4 / 2 - 75 - 15 - 2)"/>
+                                            <td t-esc="Math.round(parseFloat(line.height) * 25.4 - 87 - 15 * 2 - 4)"/>
+                                            <td>2</td>
+                                            <td>铝</td>
+                                            <td>防虫</td>
+                                        </tr>
+                                        <!-- 滑道 -->
+                                        <tr>
+                                            <td>滑道</td>
+                                            <td t-esc="Math.round((parseFloat(line.width) * 25.4 - 14 * 2 - 15 * 2 - 3 - 20) / 25.4 * 10) / 10"/>
+                                            <td>-</td>
+                                            <td>1</td>
+                                            <td>铝</td>
+                                            <td>上下滑道</td>
+                                        </tr>
+                                        <!-- 推拉窗扇玻璃 -->
+                                        <tr>
+                                            <td>推拉窗扇玻璃</td>
+                                            <td t-esc="Math.round(parseFloat(line.width) * 25.4 / 2 - 77 - 15 + 3)"/>
+                                            <td t-esc="Math.round(parseFloat(line.height) * 25.4 - 109 - 15 * 2 - 3 - 2)"/>
+                                            <td>2</td>
+                                            <td><t t-esc="line.glass || 'Clear'"/> <t t-if="line.argon">+ Argon</t></td>
+                                            <td>可动部分</td>
+                                        </tr>
+                                        <!-- 固定窗扇玻璃 -->
+                                        <tr>
+                                            <td>固定窗扇玻璃</td>
+                                            <td t-esc="Math.round(parseFloat(line.width) * 25.4 / 2 - 44 - 15)"/>
+                                            <td t-esc="Math.round(parseFloat(line.height) * 25.4 - 47 - 15 * 2 - 2)"/>
+                                            <td>2</td>
+                                            <td><t t-esc="line.glass || 'Clear'"/> <t t-if="line.argon">+ Argon</t></td>
+                                            <td>固定部分</td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="line.style == 'OX'">
+                                        <tr class="table-primary">
+                                            <td colspan="6" class="text-center">
+                                                <strong>窗户 <t t-esc="line.id"/> - <t t-esc="line.style"/> (<t t-esc="line.width"/>×<t t-esc="line.height"/>)</strong>
+                                            </td>
+                                        </tr>
+                                        <!-- 框架 -->
+                                        <tr>
+                                            <td>框架</td>
+                                            <td t-esc="Math.round((parseFloat(line.width) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                                            <td t-esc="Math.round((parseFloat(line.height) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                                            <td>2</td>
+                                            <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                            <td>主框架</td>
+                                        </tr>
+                                        <!-- 窗扇 -->
+                                        <tr>
+                                            <td>窗扇</td>
+                                            <td t-esc="Math.round((parseFloat(line.width) * 25.4 / 2 - 14.5 - 15 + 1) / 25.4 * 1000) / 1000"/>
+                                            <td t-esc="Math.round((parseFloat(line.height) * 25.4 - 46 - 15 * 2 - 2 - 1) / 25.4 * 1000) / 1000"/>
+                                            <td>2</td>
+                                            <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                            <td>可移动部分</td>
+                                        </tr>
+                                        <!-- 窗中梃 -->
+                                        <tr>
+                                            <td>窗中梃</td>
+                                            <td>-</td>
+                                            <td t-esc="Math.round((parseFloat(line.height) * 25.4 - 36 - 15 * 2) / 25.4 * 1000) / 1000"/>
+                                            <td>1</td>
+                                            <td><t t-esc="line.frame || 'Vinyl'"/></td>
+                                            <td>中间立柱</td>
+                                        </tr>
+                                        <!-- 纱窗 -->
+                                        <tr>
+                                            <td>纱窗</td>
+                                            <td t-esc="Math.round(parseFloat(line.width) * 25.4 / 2 - 75 - 15 - 2)"/>
+                                            <td t-esc="Math.round(parseFloat(line.height) * 25.4 - 87 - 15 * 2 - 4)"/>
+                                            <td>2</td>
+                                            <td>铝</td>
+                                            <td>防虫</td>
+                                        </tr>
+                                        <!-- 滑道 -->
+                                        <tr>
+                                            <td>滑道</td>
+                                            <td t-esc="Math.round((parseFloat(line.width) * 25.4 - 14 * 2 - 15 * 2 - 3 - 20) / 25.4 * 10) / 10"/>
+                                            <td>-</td>
+                                            <td>1</td>
+                                            <td>铝</td>
+                                            <td>上下滑道</td>
+                                        </tr>
+                                        <!-- 推拉窗扇玻璃 -->
+                                        <tr>
+                                            <td>推拉窗扇玻璃</td>
+                                            <td t-esc="Math.round(parseFloat(line.width) * 25.4 / 2 - 77 - 15 + 3)"/>
+                                            <td t-esc="Math.round(parseFloat(line.height) * 25.4 - 109 - 15 * 2 - 3 - 2)"/>
+                                            <td>2</td>
+                                            <td><t t-esc="line.glass || 'Clear'"/> <t t-if="line.argon">+ Argon</t></td>
+                                            <td>可动部分</td>
+                                        </tr>
+                                        <!-- 固定窗扇玻璃 -->
+                                        <tr>
+                                            <td>固定窗扇玻璃</td>
+                                            <td t-esc="Math.round(parseFloat(line.width) * 25.4 / 2 - 44 - 15)"/>
+                                            <td t-esc="Math.round(parseFloat(line.height) * 25.4 - 47 - 15 * 2 - 2)"/>
+                                            <td>2</td>
+                                            <td><t t-esc="line.glass || 'Clear'"/> <t t-if="line.argon">+ Argon</t></td>
+                                            <td>固定部分</td>
+                                        </tr>
+                                    </t>
+                                    
+                                    <!-- 其他窗户类型可以添加不同的计算逻辑 -->
+                                </t>
+                            </tbody>
+                        </table>
+                        
+                        <!-- 处理后的订单和玻璃明细 -->
+                        <h2 class="text-center mt-4">玻璃订单明细</h2>
+                        <table class="table table-bordered table-sm">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>客户</th>
+                                    <th>样式</th>
+                                    <th>宽度</th>
+                                    <th>高度</th>
+                                    <th>批次号</th>
+                                    <th>项目ID</th>
+                                    <th>类型</th>
+                                    <th>数量</th>
+                                    <th>玻璃</th>
+                                    <th>处理</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="product_lines" t-as="line">
+                                    <tr>
+                                        <td><t t-esc="line.customer || ''"/></td>
+                                        <td><t t-esc="line.style || ''"/></td>
+                                        <td><t t-esc="line.width || ''"/></td>
+                                        <td><t t-esc="line.height || ''"/></td>
+                                        <td><t t-esc="batchNumber || ''"/></td>
+                                        <td><t t-esc="line.id || ''"/></td>
+                                        <td><t t-if="line.style == 'XO'">01</t><t t-if="line.style == 'OX'">01</t></td>
+                                        <td>2</td>
+                                        <td>
+                                            <t t-if="line.glass">
+                                                <t t-esc="line.glass"/>
+                                            </t>
+                                            <t t-else="">Clear</t>
+                                        </td>
+                                        <td><t t-if="line.argon">Argon</t></td>
+                                    </tr>
+                                    <t t-if="line.style == 'XO'">
+                                        <tr>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td><t t-esc="batchNumber || ''"/></td>
+                                            <td><t t-esc="line.id || ''"/></td>
+                                            <td>02</td>
+                                            <td>2</td>
+                                            <td>
+                                                <t t-if="line.glass">
+                                                    <t t-esc="line.glass"/>
+                                                </t>
+                                                <t t-else="">Clear</t>
+                                            </td>
+                                            <td><t t-if="line.argon">Argon</t></td>
+                                        </tr>
+                                    </t>
+                                    <t t-if="line.style == 'OX'">
+                                        <tr>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td><t t-esc="batchNumber || ''"/></td>
+                                            <td><t t-esc="line.id || ''"/></td>
+                                            <td>02</td>
+                                            <td>2</td>
+                                            <td>
+                                                <t t-if="line.glass">
+                                                    <t t-esc="line.glass"/>
+                                                </t>
+                                                <t t-else="">Clear</t>
+                                            </td>
+                                            <td><t t-if="line.argon">Argon</t></td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </tbody>
+                        </table>
                     </div>
                 </t>
             </t>
@@ -248,42 +429,7 @@
         <html>
             <head>
                 <title>Cutting List - <t t-esc="production.batch_number or ''"/></title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        margin: 20px;
-                    }
-                    .header {
-                        text-align: center;
-                        margin-bottom: 20px;
-                    }
-                    .batch-info {
-                        margin-bottom: 20px;
-                        font-size: 18px;
-                        font-weight: bold;
-                    }
-                    table {
-                        width: 100%;
-                        border-collapse: collapse;
-                    }
-                    th, td {
-                        border: 1px solid #ccc;
-                        padding: 8px;
-                        text-align: center;
-                    }
-                    th {
-                        background-color: #f2f2f2;
-                    }
-                    tr:nth-child(even) {
-                        background-color: #f5f5dc;
-                    }
-                    @media print {
-                        body {
-                            margin: 0;
-                            padding: 10px;
-                        }
-                    }
-                </style>
+                <t t-call="rich_production.cutting_list_style"/>
             </head>
             <body>
                 <div class="header">
@@ -294,6 +440,265 @@
                     Batch NO.: <t t-esc="production.batch_number or ''"/>
                 </div>
                 
+                <t t-call="rich_production.cutting_list_general_table"/>
+                
+                <!-- 添加表格切换导航 -->
+                <div class="tabs">
+                    <a href="#" onclick="showEmbedTab('general-info-embed'); return false;" class="tab-button active-tab" id="general-tab-embed" style="background-color: #4CAF50; color: white;">基本信息</a>
+                    <a href="#" onclick="showEmbedTab('material-list-embed'); return false;" class="tab-button" id="material-tab-embed" style="background-color: #2196F3; color: white;">详细材料清单</a>
+                    <a href="#" onclick="showEmbedTab('glass-order-embed'); return false;" class="tab-button" id="glass-tab-embed" style="background-color: #ff9800; color: white;">玻璃订单明细</a>
+                </div>
+                
+                <!-- 添加JavaScript切换功能 -->
+                <t t-call="rich_production.cutting_list_js"/>
+                
+                <!-- 基本信息表格区域 -->
+                <div id="general-info-embed">
+                    <div class="header">
+                        <h1>General Information</h1>
+                    </div>
+                    
+                    <div class="batch-info">
+                        Batch NO.: <t t-esc="production.batch_number or ''"/>
+                    </div>
+                    
+                    <t t-call="rich_production.cutting_list_general_table"/>
+                </div>
+                
+                <!-- 详细材料清单表格区域 -->
+                <div id="material-list-embed" style="display: none;">
+                    <h2 style="text-align: center; margin-top: 30px;">详细材料清单</h2>
+                    <t t-call="rich_production.cutting_list_material_table"/>
+                </div>
+                
+                <!-- 玻璃订单明细表格区域 -->
+                <div id="glass-order-embed" style="display: none;">
+                    <h2 style="text-align: center; margin-top: 30px;">玻璃订单明细</h2>
+                    <t t-call="rich_production.cutting_list_glass_table"/>
+                </div>
+            </body>
+        </html>
+    </template>
+
+    <!-- 共享样式模板 -->
+    <template id="cutting_list_style">
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 20px;
+                background-color: #f9f9f9;
+                    }
+                    .header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                padding: 15px;
+                background-color: #f0f8ff;
+                border-radius: 8px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                    }
+                    .batch-info {
+                        margin-bottom: 20px;
+                        font-size: 18px;
+                        font-weight: bold;
+                padding: 10px;
+                background-color: #e8f4f8;
+                border-radius: 5px;
+                text-align: center;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                margin-bottom: 30px;
+                background-color: white;
+                    }
+                    th, td {
+                        border: 1px solid #ccc;
+                padding: 10px;
+                        text-align: center;
+                    }
+                    th {
+                background-color: #4a6da7;
+                color: white;
+                padding: 12px;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f5f5dc;
+                    }
+            tr:hover {
+                background-color: #f0f0f0;
+            }
+            .controls {
+                margin: 20px 0;
+            }
+            .button {
+                display: inline-block;
+                background-color: #4CAF50;
+                color: white;
+                padding: 8px 16px;
+                text-decoration: none;
+                margin-right: 10px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: normal;
+            }
+            .button:hover {
+                opacity: 0.8;
+            }
+            .excel-button {
+                background-color: #2196F3;
+            }
+            .print-button {
+                background-color: #ff9800;
+            }
+            /* 添加选项卡样式 */
+            .tabs {
+                margin: 20px 0;
+                text-align: center;
+                position: relative;
+                z-index: 1000;
+            }
+            .tab-button {
+                display: inline-block;
+                padding: 12px 24px;
+                cursor: pointer;
+                border: 2px solid #ddd;
+                background-color: #f1f1f1;
+                text-decoration: none;
+                color: black;
+                border-radius: 5px;
+                margin-right: 10px;
+                font-size: 16px;
+                font-weight: bold;
+                transition: all 0.3s ease;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                position: relative;
+                overflow: hidden;
+            }
+            .tab-button:before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.2);
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .tab-button:hover:before {
+                transform: translateX(0);
+            }
+            .tab-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            }
+            .tab-button:active {
+                transform: translateY(1px);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            }
+            .active-tab {
+                font-weight: bold !important;
+                border: 2px solid #333 !important;
+                box-shadow: inset 0 0 5px rgba(0,0,0,0.2) !important;
+                transform: translateY(1px) !important;
+                    }
+                    @media print {
+                        body {
+                            margin: 0;
+                            padding: 10px;
+                        }
+                    }
+                </style>
+    </template>
+
+    <!-- 共享JavaScript模板 -->
+    <template id="cutting_list_js">
+        <script type="text/javascript">
+        <![CDATA[
+            function showTab(tabId) {
+                console.log("切换到标签：", tabId);
+                // 隐藏所有表格
+                var generalInfo = document.getElementById('general-info');
+                var materialList = document.getElementById('material-list');
+                var glassOrder = document.getElementById('glass-order');
+                
+                if (generalInfo) generalInfo.style.display = 'none';
+                if (materialList) materialList.style.display = 'none';
+                if (glassOrder) glassOrder.style.display = 'none';
+                
+                // 重置所有标签样式
+                var generalTab = document.getElementById('general-tab');
+                var materialTab = document.getElementById('material-tab');
+                var glassTab = document.getElementById('glass-tab');
+                
+                if (generalTab) generalTab.classList.remove('active-tab');
+                if (materialTab) materialTab.classList.remove('active-tab');
+                if (glassTab) glassTab.classList.remove('active-tab');
+                
+                // 显示选中的表格
+                var selectedTab = document.getElementById(tabId);
+                if (selectedTab) selectedTab.style.display = 'block';
+                
+                // 设置活动标签样式
+                if (tabId === 'general-info' && generalTab) {
+                    generalTab.classList.add('active-tab');
+                } else if (tabId === 'material-list' && materialTab) {
+                    materialTab.classList.add('active-tab');
+                } else if (tabId === 'glass-order' && glassTab) {
+                    glassTab.classList.add('active-tab');
+                }
+            }
+            
+            function showEmbedTab(tabId) {
+                console.log("切换到嵌入式标签：", tabId);
+                // 隐藏所有表格
+                var generalInfo = document.getElementById('general-info-embed');
+                var materialList = document.getElementById('material-list-embed');
+                var glassOrder = document.getElementById('glass-order-embed');
+                
+                if (generalInfo) generalInfo.style.display = 'none';
+                if (materialList) materialList.style.display = 'none';
+                if (glassOrder) glassOrder.style.display = 'none';
+                
+                // 重置所有标签样式
+                var generalTab = document.getElementById('general-tab-embed');
+                var materialTab = document.getElementById('material-tab-embed');
+                var glassTab = document.getElementById('glass-tab-embed');
+                
+                if (generalTab) generalTab.classList.remove('active-tab');
+                if (materialTab) materialTab.classList.remove('active-tab');
+                if (glassTab) glassTab.classList.remove('active-tab');
+                
+                // 显示选中的表格
+                var selectedTab = document.getElementById(tabId);
+                if (selectedTab) selectedTab.style.display = 'block';
+                
+                // 设置活动标签样式
+                if (tabId === 'general-info-embed' && generalTab) {
+                    generalTab.classList.add('active-tab');
+                } else if (tabId === 'material-list-embed' && materialTab) {
+                    materialTab.classList.add('active-tab');
+                } else if (tabId === 'glass-order-embed' && glassTab) {
+                    glassTab.classList.add('active-tab');
+                }
+            }
+            
+            // 页面加载时初始化
+            document.addEventListener('DOMContentLoaded', function() {
+                if (document.getElementById('general-info')) {
+                    setTimeout(function() { showTab('general-info'); }, 100);
+                }
+                if (document.getElementById('general-info-embed')) {
+                    setTimeout(function() { showEmbedTab('general-info-embed'); }, 100);
+                }
+            });
+        ]]>
+        </script>
+    </template>
+
+    <!-- 基本信息表格模板 -->
+    <template id="cutting_list_general_table">
                 <table>
                     <thead>
                         <tr>
@@ -332,7 +737,233 @@
                         </t>
                     </tbody>
                 </table>
-            </body>
-        </html>
+    </template>
+
+    <!-- 材料清单表格模板 -->
+    <template id="cutting_list_material_table">
+        <table>
+            <thead>
+                <tr>
+                    <th>项目</th>
+                    <th>宽度</th>
+                    <th>高度</th>
+                    <th>数量</th>
+                    <th>材料</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 使用t-foreach遍历产品行，t-if根据样式使用不同计算 -->
+                <t t-foreach="product_lines" t-as="line">
+                    <t t-call="rich_production.cutting_list_window_material">
+                        <t t-set="window_line" t-value="line"/>
+                    </t>
+                </t>
+            </tbody>
+        </table>
+    </template>
+
+    <!-- 窗户材料计算模板 -->
+    <template id="cutting_list_window_material">
+        <t t-if="window_line.style == 'XO'">
+            <tr style="background-color: #d6e4f0;">
+                <td colspan="6" style="text-align: center;">
+                    <strong>窗户 <t t-esc="window_line.id"/> - <t t-esc="window_line.style"/> (<t t-esc="window_line.width"/>×<t t-esc="window_line.height"/>)</strong>
+                </td>
+            </tr>
+            <!-- 框架 -->
+            <tr>
+                <td>框架</td>
+                <td t-esc="Math.round((parseFloat(window_line.width) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                <td t-esc="Math.round((parseFloat(window_line.height) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                <td>2</td>
+                <td><t t-esc="window_line.frame || 'Vinyl'"/></td>
+                <td>主框架</td>
+            </tr>
+            <!-- 窗扇 -->
+            <tr>
+                <td>窗扇</td>
+                <td t-esc="Math.round((parseFloat(window_line.width) * 25.4 / 2 - 14.5 - 15 + 1) / 25.4 * 1000) / 1000"/>
+                <td t-esc="Math.round((parseFloat(window_line.height) * 25.4 - 46 - 15 * 2 - 2 - 1) / 25.4 * 1000) / 1000"/>
+                <td>2</td>
+                <td><t t-esc="window_line.frame || 'Vinyl'"/></td>
+                <td>可移动部分</td>
+            </tr>
+            <!-- 窗中梃 -->
+            <tr>
+                <td>窗中梃</td>
+                <td>-</td>
+                <td t-esc="Math.round((parseFloat(window_line.height) * 25.4 - 36 - 15 * 2) / 25.4 * 1000) / 1000"/>
+                <td>1</td>
+                <td><t t-esc="window_line.frame || 'Vinyl'"/></td>
+                <td>中间立柱</td>
+            </tr>
+            <!-- 纱窗 -->
+            <tr>
+                <td>纱窗</td>
+                <td t-esc="Math.round(parseFloat(window_line.width) * 25.4 / 2 - 75 - 15 - 2)"/>
+                <td t-esc="Math.round(parseFloat(window_line.height) * 25.4 - 87 - 15 * 2 - 4)"/>
+                <td>2</td>
+                <td>铝</td>
+                <td>防虫</td>
+            </tr>
+            <!-- 滑道 -->
+            <tr>
+                <td>滑道</td>
+                <td t-esc="Math.round((parseFloat(window_line.width) * 25.4 - 14 * 2 - 15 * 2 - 3 - 20) / 25.4 * 10) / 10"/>
+                <td>-</td>
+                <td>1</td>
+                <td>铝</td>
+                <td>上下滑道</td>
+            </tr>
+            <!-- 推拉窗扇玻璃 -->
+            <tr>
+                <td>推拉窗扇玻璃</td>
+                <td t-esc="Math.round(parseFloat(window_line.width) * 25.4 / 2 - 77 - 15 + 3)"/>
+                <td t-esc="Math.round(parseFloat(window_line.height) * 25.4 - 109 - 15 * 2 - 3 - 2)"/>
+                <td>2</td>
+                <td><t t-esc="window_line.glass || 'Clear'"/> <t t-if="window_line.argon">+ Argon</t></td>
+                <td>可动部分</td>
+            </tr>
+            <!-- 固定窗扇玻璃 -->
+            <tr>
+                <td>固定窗扇玻璃</td>
+                <td t-esc="Math.round(parseFloat(window_line.width) * 25.4 / 2 - 44 - 15)"/>
+                <td t-esc="Math.round(parseFloat(window_line.height) * 25.4 - 47 - 15 * 2 - 2)"/>
+                <td>2</td>
+                <td><t t-esc="window_line.glass || 'Clear'"/> <t t-if="window_line.argon">+ Argon</t></td>
+                <td>固定部分</td>
+            </tr>
+        </t>
+        <t t-if="window_line.style == 'OX'">
+            <tr style="background-color: #d6e4f0;">
+                <td colspan="6" style="text-align: center;">
+                    <strong>窗户 <t t-esc="window_line.id"/> - <t t-esc="window_line.style"/> (<t t-esc="window_line.width"/>×<t t-esc="window_line.height"/>)</strong>
+                </td>
+            </tr>
+            <!-- 框架 -->
+            <tr>
+                <td>框架</td>
+                <td t-esc="Math.round((parseFloat(window_line.width) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                <td t-esc="Math.round((parseFloat(window_line.height) * 25.4 + 3 * 2) / 25.4 * 1000) / 1000"/>
+                <td>2</td>
+                <td><t t-esc="window_line.frame || 'Vinyl'"/></td>
+                <td>主框架</td>
+            </tr>
+            <!-- 窗扇 -->
+            <tr>
+                <td>窗扇</td>
+                <td t-esc="Math.round((parseFloat(window_line.width) * 25.4 / 2 - 14.5 - 15 + 1) / 25.4 * 1000) / 1000"/>
+                <td t-esc="Math.round((parseFloat(window_line.height) * 25.4 - 46 - 15 * 2 - 2 - 1) / 25.4 * 1000) / 1000"/>
+                <td>2</td>
+                <td><t t-esc="window_line.frame || 'Vinyl'"/></td>
+                <td>可移动部分</td>
+            </tr>
+            <!-- 窗中梃 -->
+            <tr>
+                <td>窗中梃</td>
+                <td>-</td>
+                <td t-esc="Math.round((parseFloat(window_line.height) * 25.4 - 36 - 15 * 2) / 25.4 * 1000) / 1000"/>
+                <td>1</td>
+                <td><t t-esc="window_line.frame || 'Vinyl'"/></td>
+                <td>中间立柱</td>
+            </tr>
+            <!-- 纱窗 -->
+            <tr>
+                <td>纱窗</td>
+                <td t-esc="Math.round(parseFloat(window_line.width) * 25.4 / 2 - 75 - 15 - 2)"/>
+                <td t-esc="Math.round(parseFloat(window_line.height) * 25.4 - 87 - 15 * 2 - 4)"/>
+                <td>2</td>
+                <td>铝</td>
+                <td>防虫</td>
+            </tr>
+            <!-- 滑道 -->
+            <tr>
+                <td>滑道</td>
+                <td t-esc="Math.round((parseFloat(window_line.width) * 25.4 - 14 * 2 - 15 * 2 - 3 - 20) / 25.4 * 10) / 10"/>
+                <td>-</td>
+                <td>1</td>
+                <td>铝</td>
+                <td>上下滑道</td>
+            </tr>
+            <!-- 推拉窗扇玻璃 -->
+            <tr>
+                <td>推拉窗扇玻璃</td>
+                <td t-esc="Math.round(parseFloat(window_line.width) * 25.4 / 2 - 77 - 15 + 3)"/>
+                <td t-esc="Math.round(parseFloat(window_line.height) * 25.4 - 109 - 15 * 2 - 3 - 2)"/>
+                <td>2</td>
+                <td><t t-esc="window_line.glass || 'Clear'"/> <t t-if="window_line.argon">+ Argon</t></td>
+                <td>可动部分</td>
+            </tr>
+            <!-- 固定窗扇玻璃 -->
+            <tr>
+                <td>固定窗扇玻璃</td>
+                <td t-esc="Math.round(parseFloat(window_line.width) * 25.4 / 2 - 44 - 15)"/>
+                <td t-esc="Math.round(parseFloat(window_line.height) * 25.4 - 47 - 15 * 2 - 2)"/>
+                <td>2</td>
+                <td><t t-esc="window_line.glass || 'Clear'"/> <t t-if="window_line.argon">+ Argon</t></td>
+                <td>固定部分</td>
+            </tr>
+        </t>
+    </template>
+
+    <!-- 玻璃订单表格模板 -->
+    <template id="cutting_list_glass_table">
+        <table>
+            <thead>
+                <tr>
+                    <th>客户</th>
+                    <th>样式</th>
+                    <th>宽度</th>
+                    <th>高度</th>
+                    <th>批次号</th>
+                    <th>项目ID</th>
+                    <th>类型</th>
+                    <th>数量</th>
+                    <th>玻璃</th>
+                    <th>处理</th>
+                </tr>
+            </thead>
+            <tbody>
+                <t t-foreach="product_lines" t-as="line">
+                    <tr>
+                        <td><t t-esc="line.customer || ''"/></td>
+                        <td><t t-esc="line.style || ''"/></td>
+                        <td><t t-esc="line.width || ''"/></td>
+                        <td><t t-esc="line.height || ''"/></td>
+                        <td><t t-esc="batchNumber || ''"/></td>
+                        <td><t t-esc="line.id || ''"/></td>
+                        <td><t t-if="line.style == 'XO'">01</t><t t-if="line.style == 'OX'">01</t></td>
+                        <td>2</td>
+                        <td>
+                            <t t-if="line.glass">
+                                <t t-esc="line.glass"/>
+                            </t>
+                            <t t-else="">Clear</t>
+                        </td>
+                        <td><t t-if="line.argon">Argon</t></td>
+                    </tr>
+                    <t t-if="line.style == 'XO' or line.style == 'OX'">
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td><t t-esc="batchNumber || ''"/></td>
+                            <td><t t-esc="line.id || ''"/></td>
+                            <td>02</td>
+                            <td>2</td>
+                            <td>
+                                <t t-if="line.glass">
+                                    <t t-esc="line.glass"/>
+                                </t>
+                                <t t-else="">Clear</t>
+                            </td>
+                            <td><t t-if="line.argon">Argon</t></td>
+                        </tr>
+                    </t>
+                </t>
+            </tbody>
+        </table>
     </template>
 </odoo> 

@@ -383,6 +383,10 @@ class CuttingListPreview extends Component {
                                     color: line.color || '',
                                     note: line.notes || '',
                                 };
+                                
+                                // 添加窗户类型的计算尺寸
+                                this._addCalculatedDimensions(lineObj);
+                                
                                 console.log("添加处理后的行:", lineObj);
                                 processedLines.push(lineObj);
                                 itemId++;
@@ -603,6 +607,105 @@ class CuttingListPreview extends Component {
     
     close() {
         this.actionService.doAction({ type: "ir.actions.act_window_close" });
+    }
+    
+    /**
+     * 根据窗户类型计算各种尺寸
+     * @param {Object} lineObj - 窗户行对象
+     * @returns {Object} 添加了计算尺寸的窗户行对象
+     */
+    _addCalculatedDimensions(lineObj) {
+        try {
+            // 确保宽度和高度是有效数字
+            const width = parseFloat(lineObj.width) || 0;
+            const height = parseFloat(lineObj.height) || 0;
+            
+            if (!width || !height) {
+                console.warn("无效的宽度或高度:", lineObj.width, lineObj.height);
+                return lineObj;
+            }
+            
+            // 转换为毫米
+            const w = width * 25.4;
+            const h = height * 25.4;
+            const q = 1; // 数量默认为1
+            
+            console.log(`计算窗户尺寸: 样式=${lineObj.style}, 宽=${width}英寸(${w}mm), 高=${height}英寸(${h}mm)`);
+            
+            // 根据窗户类型计算尺寸
+            if (lineObj.style === 'XO' || lineObj.style === 'OX') {
+                // 框架尺寸，英寸，精确到小数点后3位
+                const framew = Math.round((w + 3 * 2) / 25.4 * 1000) / 1000;
+                const frameh = Math.round((h + 3 * 2) / 25.4 * 1000) / 1000;
+                
+                // 窗扇尺寸，英寸，精确到小数点后3位
+                const sashw = Math.round((w / 2 - 14.5 - 15 + 1) / 25.4 * 1000) / 1000;
+                const sashh = Math.round((h - 46 - 15 * 2 - 2 - 1) / 25.4 * 1000) / 1000;
+                
+                // 纱窗尺寸，毫米
+                const screenw = Math.round(w / 2 - 75 - 15 - 2);
+                const screenh = Math.round(h - 87 - 15 * 2 - 4);
+                
+                // 窗中梃尺寸，英寸，精确到小数点后3位
+                const mullion = Math.round((h - 36 - 15 * 2) / 25.4 * 1000) / 1000;
+                const mullionA = Math.round((h - 36 - 15 * 2) / 25.4 - 2 * 10) / 10;
+                
+                // 把手位置，英寸，整数
+                const handleA = Math.round((h - 46 - 15 * 2) / 25.4 / 2 + 4);
+                
+                // 滑道尺寸，英寸，精确到小数点后1位
+                const track = Math.round((w - 14 * 2 - 15 * 2 - 3 - 20) / 25.4 * 10) / 10;
+                
+                // 玻璃尺寸，毫米
+                const sashglassw = Math.round(w / 2 - 77 - 15 + 3);
+                const sashglassh = Math.round(h - 109 - 15 * 2 - 3 - 2);
+                const fixedglassw = Math.round(w / 2 - 44 - 15);
+                const fixedglassh = Math.round(h - 47 - 15 * 2 - 2);
+                
+                // 格栅尺寸，毫米
+                const sashgridw = Math.round(sashglassw - 18 - 2);
+                const sashgridh = Math.round(sashglassh - 18 - 2);
+                const fixedgridw = Math.round(fixedglassw - 18 - 2);
+                const fixedgridh = Math.round(fixedglassh - 18 - 2);
+                
+                // 将计算结果添加到行对象中
+                Object.assign(lineObj, {
+                    // 框架
+                    framew, frameh,
+                    
+                    // 窗扇
+                    sashw, sashh,
+                    
+                    // 纱窗
+                    screenw, screenh,
+                    
+                    // 窗中梃
+                    mullion, mullionA,
+                    
+                    // 把手位置
+                    handleA,
+                    
+                    // 滑道
+                    track,
+                    
+                    // 玻璃
+                    sashglassw, sashglassh,
+                    fixedglassw, fixedglassh,
+                    
+                    // 格栅
+                    sashgridw, sashgridh,
+                    fixedgridw, fixedgridh
+                });
+                
+                console.log("XO/OX窗户计算完成:", lineObj);
+            }
+            // 其他窗户类型可以在这里添加...
+            
+        } catch (error) {
+            console.error("计算窗户尺寸时出错:", error);
+        }
+        
+        return lineObj;
     }
 }
 
