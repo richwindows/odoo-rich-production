@@ -30,4 +30,20 @@
         <field name="path">/rich_production/static/src/css/rich_production.css</field>
         <field name="sequence">30</field>
     </record>
+    
+    <!-- Window Calculation Modules -->
+    <record id="rich_production_xo_ox_window_js" model="ir.asset">
+        <field name="name">Rich Production XO OX Window Calculations</field>
+        <field name="bundle">web.assets_backend</field>
+        <field name="path">/rich_production/static/src/js/window_calculations/xo_ox_window.js</field>
+        <field name="sequence">40</field>
+    </record>
+    
+    <!-- Cutting List Preview Modules -->
+    <record id="rich_production_cutting_list_preview_js" model="ir.asset">
+        <field name="name">Rich Production Cutting List Preview</field>
+        <field name="bundle">web.assets_backend</field>
+        <field name="path">/rich_production/static/src/js/cutting_list_preview.js</field>
+        <field name="sequence">50</field>
+    </record>
 </odoo> 
