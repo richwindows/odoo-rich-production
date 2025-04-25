@@ -13,8 +13,10 @@
     'author': 'Your Company',
     'depends': ['base', 'mail', 'contacts', 'sale_management', 'account', 'web'],
     'data': [
-        'security/security.xml',
         'security/ir.model.access.csv',
+        'security/security.xml',
+        'data/window_calculation_formula_data.xml',
+        'views/window_calculation_formula_views.xml',
         'views/assets.xml',
         'views/action_views.xml',
         'views/production_views.xml',
@@ -28,6 +30,7 @@
     'assets': {
         'web.assets_backend': [
             'rich_production/static/src/js/rich_production_calendar.js',
+            'rich_production/static/src/js/window_calculations/xo_ox_window.js',
             'rich_production/static/src/js/cutting_list_preview.js',
             'rich_production/static/src/xml/cutting_list_preview.xml',
             'rich_production/static/src/css/rich_production.css',

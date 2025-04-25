@@ -4,11 +4,10 @@ import { registry } from "@web/core/registry";
 import { Component, onWillStart, useState, onMounted } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { download } from "@web/core/network/download";
+import { processWindowData } from "./window_calculations/xo_ox_window";
 
 class CuttingListPreview extends Component {
     setup() {
-      
-        
         // 初始化params对象，确保安全
         const props = this.props || {};
         const params = props.params || {};
@@ -19,27 +18,19 @@ class CuttingListPreview extends Component {
         // 1. 直接从props.productionId获取
         if (props.productionId) {
             productionId = props.productionId;
-           
         }
         // 2. 从props.action.productionId获取
         else if (props.action && props.action.productionId) {
             productionId = props.action.productionId;
-            
         }
         // 3. 从params获取
         else if (params.productionId) {
             productionId = params.productionId;
-           
         }
         // 4. 从props.action.params获取
         else if (props.action && props.action.params && props.action.params.productionId) {
             productionId = props.action.params.productionId;
-        
         }
-        
-    
-        
-     
         
         this.state = useState({
             productionId: productionId,
@@ -59,8 +50,8 @@ class CuttingListPreview extends Component {
         this.actionService = useService("action");
         this.notificationService = useService("notification");
         
-        // Get the XO/OX window calculator module
-        this.XOOXWindowCalculator = require('rich_production.xo_ox_window');
+        // 从导入的模块获取窗口计算函数
+        this.XOOXWindowCalculator = { processWindowData };
         
         onWillStart(async () => {
             if (!this.state.productionId) {
@@ -79,7 +70,6 @@ class CuttingListPreview extends Component {
                     
                     if (productions && productions.length > 0) {
                         this.state.productionId = productions[0].id;
-                        // console.log("获取到最新的生产记录ID:", this.state.productionId);
                     }
                 } catch (error) {
                     console.error("获取生产记录失败:", error);
@@ -97,10 +87,8 @@ class CuttingListPreview extends Component {
     async loadData() {
         try {
             this.state.loading = true;
-            // console.log("开始加载下料单数据，生产ID:", this.state.productionId);
             
             if (!this.state.productionId) {
-                console.error("无效的生产ID");
                 this.state.productLines = [];
                 this.notificationService.add("无法获取有效的生产记录ID，请从生产界面点击下料单按钮", { type: "danger" });
                 return;
@@ -108,7 +96,6 @@ class CuttingListPreview extends Component {
             
             // 创建空表格的模型
             const createEmptyTable = () => {
-                console.log("创建空表格");
                 this.state.productLines = [];
                 this.state.loading = false;
                 // 添加一个示例行，便于用户理解表格结构
@@ -129,7 +116,6 @@ class CuttingListPreview extends Component {
             };
             
             try {
-                // console.log("开始获取生产记录信息...");
                 const productions = await this.orm.searchRead(
                     "rich_production.production", 
                     [["id", "=", this.state.productionId]],
@@ -144,10 +130,7 @@ class CuttingListPreview extends Component {
                 }
                 
                 this.state.batchNumber = productions[0].batch_number || '';
-                // console.log("获取到批次号:", this.state.batchNumber);
-                // console.log("生产记录关联的产品行IDs:", productions[0].product_line_ids);
                 
-                // 检查是否有产品行
                 if (!productions[0].product_line_ids || productions[0].product_line_ids.length === 0) {
                     console.warn("生产记录没有关联的产品行");
                     this.notificationService.add("该生产记录中没有产品数据，请先添加产品", { type: "warning" });
@@ -155,8 +138,6 @@ class CuttingListPreview extends Component {
                     return;
                 }
                 
-                // 尝试使用简化的字段集合来减少出错可能
-                // console.log("开始获取产品行数据...");
                 try {
                     // 先尝试获取一个产品行的所有字段，用于调试
                     const sampleLine = await this.orm.searchRead(
@@ -164,7 +145,6 @@ class CuttingListPreview extends Component {
                         [["id", "=", productions[0].product_line_ids[0]]],
                         []  // 不指定字段，获取所有字段
                     );
-                    // console.log("样本产品行数据:", sampleLine);
                     
                     // 检查字段存在情况，确定实际可用字段
                     let availableFields = [];
@@ -190,8 +170,6 @@ class CuttingListPreview extends Component {
                         }
                     }
                     
-                    console.log("可用字段:", availableFields);
-                    
                     // 使用确认可用的字段获取产品行数据
                     const lines = await this.orm.searchRead(
                         "rich_production.line", 
@@ -199,15 +177,12 @@ class CuttingListPreview extends Component {
                         availableFields
                     );
                     
-                    // console.log("获取到产品行:", lines ? lines.length : 0, "条");
-                    
                     if (lines && lines.length > 0) {
                         const processedLines = [];
                         let itemId = 1;
                         
                         for (let index = 0; index < lines.length; index++) {
                             const line = lines[index];
-                            // console.log("处理产品行:", index + 1, "ID:", line.id);
                             
                             // 确定产品数量
                             let quantity = 1; // 默认为1
@@ -226,7 +201,6 @@ class CuttingListPreview extends Component {
                             }
                             
                             const actualQuantity = Math.max(1, quantity);
-                            // console.log("产品数量:", actualQuantity);
                             
                             // 准备客户信息和产品信息
                             let customerCode = '';
@@ -243,8 +217,6 @@ class CuttingListPreview extends Component {
                                     productName = String(line.product_id);
                                 }
                                 
-                                // console.log("产品名称:", productName);
-                                
                                 // 尝试从产品名称中提取风格类型
                                 if (productName.includes('XOX')) {
                                     style = 'XOX';
@@ -259,7 +231,6 @@ class CuttingListPreview extends Component {
                                 } else {
                                     style = productName;
                                 }
-                                // console.log("提取的风格:", style);
                             }
                             
                             // 获取客户信息 - 如果有发票ID
@@ -273,7 +244,6 @@ class CuttingListPreview extends Component {
                                     }
                                     
                                     if (invoiceId) {
-                                        // console.log("获取发票客户信息, 发票ID:", invoiceId);
                                         const invoices = await this.orm.searchRead(
                                             "account.move",
                                             [["id", "=", invoiceId]],
@@ -285,7 +255,6 @@ class CuttingListPreview extends Component {
                                                 invoices[0].partner_id[1] || '' : 
                                                 (invoices[0].partner_id.name || '');
                                                 
-                                            // console.log("客户名称:", customer);
                                             // 如果客户名称太长，截取前8个字符加ID
                                             if (customer && customer.length > 10) {
                                                 const partnerId = Array.isArray(invoices[0].partner_id) ?
@@ -295,7 +264,6 @@ class CuttingListPreview extends Component {
                                             } else {
                                                 customerCode = customer;
                                             }
-                                            // console.log("客户代码:", customerCode);
                                         }
                                     }
                                 } catch (invoiceError) {
@@ -321,13 +289,10 @@ class CuttingListPreview extends Component {
                                     note: line.notes || '',
                                 };
                                 
-                                // console.log("添加处理后的行:", lineObj);
                                 processedLines.push(lineObj);
                                 itemId++;
                             }
                         }
-                        
-                        console.log("处理完成，总行数:", processedLines.length);
                         
                         if (processedLines.length > 0) {
                             this.state.productLines = processedLines;
@@ -346,7 +311,7 @@ class CuttingListPreview extends Component {
                     
                     // 回退到使用最小字段集
                     try {
-                        console.log("尝试使用最小字段集获取产品行...");
+                        // console.log("尝试使用最小字段集获取产品行...");
                         const minimalLines = await this.orm.searchRead(
                             "rich_production.line", 
                             [["production_id", "=", this.state.productionId]],
@@ -354,7 +319,7 @@ class CuttingListPreview extends Component {
                         );
                         
                         if (minimalLines && minimalLines.length > 0) {
-                            console.log("使用最小字段集获取到产品行:", minimalLines.length, "条");
+                            // console.log("使用最小字段集获取到产品行:", minimalLines.length, "条");
                             const processedLines = [];
                             
                             // 创建简化的行数据
@@ -402,11 +367,12 @@ class CuttingListPreview extends Component {
             this.state.loading = false;
         }
         
-        // Process window data after loading
-        this.processWindowData();
+        // 所有数据加载完成后处理窗户数据
+        console.log('数据加载完成，开始处理窗户数据...');
+        await this.processWindowData();
     }
     
-    processWindowData() {
+    async processWindowData() {
         // Reset all data arrays
         this.state.frameData = [];
         this.state.sashData = [];
@@ -415,53 +381,73 @@ class CuttingListPreview extends Component {
         this.state.glassData = [];
         this.state.gridData = [];
 
-        // Process each window
-        this.state.productLines.forEach(window => {
-            console.log(`\nProcessing window ID: ${window.id}, Style: ${window.style}`);
-            
-            // The return value of require is the exported object
-            const calculator = this.XOOXWindowCalculator;
-            const calculations = calculator.processWindowData(window);
-            
-            // Store calculations for later use
-            window.calculations = calculations;
-            
-            // Format frame data for display in the frame details table
-            const frameData = this.formatFrameData(window, calculations);
-            if (frameData) {
-                this.state.frameData.push(frameData);
+        console.log('开始处理窗户数据，窗户数量:', this.state.productLines.length);
+
+        // Process each window - 使用for循环而不是forEach以便使用await
+        for (let index = 0; index < this.state.productLines.length; index++) {
+            const window = this.state.productLines[index];
+            try {
+                console.log(`处理窗户 #${index+1}:`, window);
+                
+                // 调用窗户计算函数 - 使用await等待异步结果
+                const calculations = await this.XOOXWindowCalculator.processWindowData(window);
+                
+                console.log(`窗户 #${index+1} 计算结果:`, calculations);
+                
+                // Store calculations for later use
+                window.calculations = calculations;
+                
+                // 确保calculations对象有效
+                if (!calculations) {
+                    console.warn(`窗户 #${index+1} 计算结果为空`);
+                    continue;
+                }
+                
+                // Format frame data for display in the frame details table
+                const frameData = this.formatFrameData(window, calculations);
+                console.log(`窗户 #${index+1} 框架数据:`, frameData);
+                if (frameData) {
+                    this.state.frameData.push(frameData);
+                }
+                
+                // Format sash data for display in the sash details table
+                const sashData = this.formatSashData(window, calculations);
+                console.log(`窗户 #${index+1} 嵌扇数据:`, sashData);
+                if (sashData) {
+                    this.state.sashData.push(sashData);
+                }
+                
+                // Format screen data for display in the screen table
+                const screenData = this.formatScreenData(window, calculations);
+                console.log(`窗户 #${index+1} 屏幕数据:`, screenData);
+                if (screenData) {
+                    this.state.screenData.push(screenData);
+                }
+                
+                // Format parts data for display in the parts table
+                const partsData = this.formatPartsData(window, calculations);
+                console.log(`窗户 #${index+1} 配件数据:`, partsData);
+                if (partsData) {
+                    this.state.partsData.push(partsData);
+                }
+                
+                // Format glass data for display in the glass table
+                const glassData = this.formatGlassData(window, calculations);
+                console.log(`窗户 #${index+1} 玻璃数据:`, glassData);
+                if (glassData && glassData.length > 0) {
+                    this.state.glassData.push(...glassData);
+                }
+                
+                // Format grid data for display in the grid table
+                const gridData = this.formatGridData(window, calculations);
+                console.log(`窗户 #${index+1} 网格数据:`, gridData);
+                if (gridData) {
+                    this.state.gridData.push(gridData);
+                }
+            } catch (error) {
+                console.error(`处理窗户 #${index+1} 时发生错误:`, error);
             }
-            
-            // Format sash data for display in the sash details table
-            const sashData = this.formatSashData(window, calculations);
-            if (sashData) {
-                this.state.sashData.push(sashData);
-            }
-            
-            // Format screen data for display in the screen table
-            const screenData = this.formatScreenData(window, calculations);
-            if (screenData) {
-                this.state.screenData.push(screenData);
-            }
-            
-            // Format parts data for display in the parts table
-            const partsData = this.formatPartsData(window, calculations);
-            if (partsData) {
-                this.state.partsData.push(partsData);
-            }
-            
-            // Format glass data for display in the glass table
-            const glassData = this.formatGlassData(window, calculations);
-            if (glassData) {
-                this.state.glassData.push(...glassData);
-            }
-            
-            // Format grid data for display in the grid table
-            const gridData = this.formatGridData(window, calculations);
-            if (gridData) {
-                this.state.gridData.push(gridData);
-            }
-        });
+        }
         
         // 对Glass数据按ID和lineNumber排序
         if (this.state.glassData && this.state.glassData.length > 0) {
@@ -485,12 +471,14 @@ class CuttingListPreview extends Component {
             });
         }
         
-        console.log('Frame data prepared for display:', this.state.frameData);
-        console.log('Sash data prepared for display:', this.state.sashData);
-        console.log('Screen data prepared for display:', this.state.screenData);
-        console.log('Parts data prepared for display:', this.state.partsData);
-        console.log('Glass data prepared for display:', this.state.glassData);
-        console.log('Grid data prepared for display:', this.state.gridData);
+        // 输出最终结果
+        console.log('数据处理完成，最终结果:');
+        console.log('- 框架数据:', this.state.frameData.length, '条', this.state.frameData);
+        console.log('- 嵌扇数据:', this.state.sashData.length, '条', this.state.sashData);
+        console.log('- 屏幕数据:', this.state.screenData.length, '条', this.state.screenData);
+        console.log('- 配件数据:', this.state.partsData.length, '条', this.state.partsData);
+        console.log('- 玻璃数据:', this.state.glassData.length, '条', this.state.glassData);
+        console.log('- 网格数据:', this.state.gridData.length, '条', this.state.gridData);
     }
     
     /**
@@ -501,20 +489,23 @@ class CuttingListPreview extends Component {
      */
     formatFrameData(window, calculations) {
         try {
-            // 使用直接结构
-            const frameList = calculations.frame;
-            if (!frameList || !Array.isArray(frameList)) {
+            // 使用直接解构获取frame数组
+            const frameList = calculations.frame || [];
+            
+            if (!Array.isArray(frameList) || frameList.length === 0) {
+                console.warn(`窗户ID=${window.id} frame数组为空或无效`);
                 return null;
             }
 
-            console.log('原始frame数据:', frameList);
+            console.log(`窗户ID=${window.id} frame原始数据:`, frameList);
 
             // 创建一个新对象用于存储表格数据
             const tableData = {
                 batch: this.state.batchNumber,
-                style: window.style,
+                style: window.style || '',
                 id: window.id,
-                color: window.color,
+                color: window.color || '',
+                frameType: calculations.frameType || window.frame || '',
                 // 表格中实际使用的列名（与XML模板中的列名完全一致）
                 '82-02B--': '',
                 '82-02BPcs': '',
@@ -527,23 +518,20 @@ class CuttingListPreview extends Component {
                 '82-01--': '',
                 '82-01Pcs': '',
                 '82-01|': '',
-                '82-01|Pcs': '',
-                // 添加G4-J4列
-                '82-01G4': '',
-                '82-01G4Pcs': '',
-                '82-01J4': '',
-                '82-01J4Pcs': ''
+                '82-01|Pcs': ''
+               
             };
 
             // 遍历框架元素列表
             frameList.forEach(item => {
                 const { material, position, length, qty } = item;
                 
-                if (!material || !position) {
+                if (!material || !position || !length) {
+                    console.warn(`窗户ID=${window.id} 框架元素数据不完整:`, item);
                     return;
                 }
                 
-                // console.log(`处理框架元素: material=${material}, position=${position}, length=${length}, qty=${qty}`);
+                console.log(`处理框架元素: 材料=${material}, 位置=${position}, 长度=${length}, 数量=${qty}`);
                 
                 // 材料映射 - 例如将82-02映射到82-02B
                 let materialMapping = {
@@ -556,32 +544,37 @@ class CuttingListPreview extends Component {
                 // 获取映射后的材料编号
                 const mappedMaterial = materialMapping[material] || material;
                 
-                // 构建完全匹配表格的列名（不带空格）
-                const lengthColumn = position === 'G4' || position === 'J4' 
-                    ? `${mappedMaterial}${position}` 
-                    : `${mappedMaterial}${position}`;
+                // 构建完全匹配表格的列名
+                // 针对不同位置构建不同的列名
+                let lengthColumn, qtyColumn;
                 
-                const qtyColumn = position === '|' 
-                    ? `${mappedMaterial}${position}Pcs` 
-                    : (position === 'G4' || position === 'J4') 
-                        ? `${mappedMaterial}${position}Pcs` 
-                        : `${mappedMaterial}Pcs`;
+                if (position === '|') {
+                    lengthColumn = `${mappedMaterial}${position}`;
+                    qtyColumn = `${mappedMaterial}${position}Pcs`;
+                } else if (position === '--') {
+                    lengthColumn = `${mappedMaterial}--`;
+                    qtyColumn = `${mappedMaterial}Pcs`;
+                } else {
+                    // 默认情况下，将其他position都视为'--'
+                    lengthColumn = `${mappedMaterial}--`;
+                    qtyColumn = `${mappedMaterial}Pcs`;
+                }
                 
-                // console.log(`映射到表格列: ${lengthColumn}，数量列: ${qtyColumn}`);
+                console.log(`映射后的列名: 长度列=${lengthColumn}, 数量列=${qtyColumn}`);
                 
                 // 设置长度和数量
                 if (lengthColumn in tableData) {
                     tableData[lengthColumn] = length;
-                    tableData[qtyColumn] = qty !== undefined && qty !== null ? qty : 2; // 默认为2
+                    tableData[qtyColumn] = qty;
                 } else {
                     console.warn(`列名 "${lengthColumn}" 不存在于表格数据中，映射失败`);
                 }
             });
 
-            // console.log('最终格式化的框架数据:', tableData);
+            console.log(`窗户ID=${window.id} 最终框架表格数据:`, tableData);
             return tableData;
         } catch (error) {
-            console.error('Error formatting frame data:', error);
+            console.error(`Error formatting frame data for window ID=${window.id}:`, error);
             return null;
         }
     }
@@ -594,20 +587,23 @@ class CuttingListPreview extends Component {
      */
     formatSashData(window, calculations) {
         try {
-            // 使用直接结构
-            const sashList = calculations.sash;
-            if (!sashList || !Array.isArray(sashList)) {
+            // 使用直接解构获取sash数组
+            const sashList = calculations.sash || [];
+            
+            if (!Array.isArray(sashList) || sashList.length === 0) {
+                console.warn(`窗户ID=${window.id} sash数组为空或无效`);
                 return null;
             }
 
-            console.log('原始sash数据:', sashList);
+            console.log(`窗户ID=${window.id} sash原始数据:`, sashList);
 
             // 创建一个新对象用于存储表格数据
             const tableData = {
                 batch: this.state.batchNumber,
-                style: window.style,
+                style: window.style || '',
                 id: window.id,
-                color: window.color,
+                color: window.color || '',
+                frameType: calculations.frameType || window.frame || '',
                 // 表格中实际使用的列名（与XML模板中的列名完全一致）
               
                 // 添加嵌扇专用材料列
@@ -625,15 +621,16 @@ class CuttingListPreview extends Component {
                 '82-04|Pcs': ''
             };
 
-            // 遍历框架元素列表
+            // 遍历嵌扇元素列表
             sashList.forEach(item => {
                 const { material, position, length, qty } = item;
                 
-                if (!material || !position) {
+                if (!material || !position || !length) {
+                    console.warn(`窗户ID=${window.id} 嵌扇元素数据不完整:`, item);
                     return;
                 }
                 
-                // console.log(`处理嵌扇元素: material=${material}, position=${position}, length=${length}, qty=${qty}`);
+                console.log(`处理嵌扇元素: 材料=${material}, 位置=${position}, 长度=${length}, 数量=${qty}`);
                 
                 // 材料映射 - 例如将82-02映射到82-02B
                 let materialMapping = {
@@ -649,25 +646,36 @@ class CuttingListPreview extends Component {
                 // 获取映射后的材料编号
                 const mappedMaterial = materialMapping[material] || material;
                 
-                // 构建完全匹配表格的列名（不带空格）
-                const lengthColumn = `${mappedMaterial}${position}`;
-                const qtyColumn = position === '|' ? `${mappedMaterial}${position}Pcs` : `${mappedMaterial}Pcs`;
+                // 构建完全匹配表格的列名
+                let lengthColumn, qtyColumn;
                 
-                // console.log(`映射到表格列: ${lengthColumn}，数量列: ${qtyColumn}`);
+                if (position === '|') {
+                    lengthColumn = `${mappedMaterial}${position}`;
+                    qtyColumn = `${mappedMaterial}${position}Pcs`;
+                } else if (position === '--') {
+                    lengthColumn = `${mappedMaterial}--`;
+                    qtyColumn = `${mappedMaterial}Pcs`;
+                } else {
+                    // 默认情况下，将其他position都视为'--'
+                    lengthColumn = `${mappedMaterial}--`;
+                    qtyColumn = `${mappedMaterial}Pcs`;
+                }
+                
+                console.log(`映射后的列名: 长度列=${lengthColumn}, 数量列=${qtyColumn}`);
                 
                 // 设置长度和数量
                 if (lengthColumn in tableData) {
                     tableData[lengthColumn] = length;
-                    tableData[qtyColumn] = qty !== undefined && qty !== null ? qty : '';
+                    tableData[qtyColumn] = qty;
                 } else {
                     console.warn(`列名 "${lengthColumn}" 不存在于表格数据中，映射失败`);
                 }
             });
 
-            // console.log('最终格式化的嵌扇数据:', tableData);
+            console.log(`窗户ID=${window.id} 最终嵌扇表格数据:`, tableData);
             return tableData;
         } catch (error) {
-            console.error('Error formatting sash data:', error);
+            console.error(`Error formatting sash data for window ID=${window.id}:`, error);
             return null;
         }
     }
@@ -698,8 +706,6 @@ class CuttingListPreview extends Component {
                         screenhPcs = item.qty;
                     }
                 });
-                
-                console.log('从calculations获取到屏幕数据:', screenw, screenh);
             } 
             // 回退到calculations.screenw和screenh
             else if (calculations && calculations.screenw !== undefined && calculations.screenh !== undefined) {
@@ -707,7 +713,6 @@ class CuttingListPreview extends Component {
                 screenh = calculations.screenh;
                 screenwPcs = 2;
                 screenhPcs = 2;
-                console.log('从calculations根属性获取到屏幕数据:', screenw, screenh);
             } 
             // 回退到window对象本身的screenw和screenh
             else if (window.screenw !== undefined && window.screenh !== undefined) {
@@ -756,6 +761,7 @@ class CuttingListPreview extends Component {
                 lineId: window.id,
                 batch: this.state.batchNumber,
                 style: window.style || '',
+                frameType: calculations.frameType || '',
                 color: window.color || '',
                 // 窗中梃
                 mullion: '',
@@ -780,13 +786,11 @@ class CuttingListPreview extends Component {
             
             // 检查是否有计算模块返回的parts数据
             if (calculations && calculations.parts && Array.isArray(calculations.parts)) {
-                console.log('使用计算模块中的parts数据:', calculations.parts);
-                
                 // 遍历parts数据并填充到表格数据对象中
                 calculations.parts.forEach(part => {
                     const { material, position, length, qty } = part;
                     
-                    // 根据material类型设置对应字段
+                    // 根据material类型和position设置对应字段
                     if (material === 'mullion' && position === '|') {
                         partsData.mullion = length;
                     } 
@@ -821,8 +825,6 @@ class CuttingListPreview extends Component {
             } 
             // 回退到旧的计算方式
             else if (calculations && calculations.basics) {
-                console.log('使用回退计算方式生成parts数据');
-                
                 // 使用计算的mullion数据
                 if (window.mullion !== undefined) {
                     partsData.mullion = window.mullion;
@@ -968,7 +970,6 @@ class CuttingListPreview extends Component {
             
             // 直接使用生产ID构建下载URL
             const url = `/rich_production/download_excel/${this.state.productionId}`;
-            console.log("下载Excel URL:", url);
             
             // 使用fetch API直接下载文件
             const response = await fetch(url, {
@@ -1034,7 +1035,6 @@ class CuttingListPreview extends Component {
             
             // 直接使用生产ID构建下载URL
             const url = `/rich_production/print_pdf/${this.state.productionId}`;
-            console.log("下载PDF URL:", url);
             
             // 使用fetch API直接下载文件
             const response = await fetch(url, {
@@ -1096,22 +1096,6 @@ class CuttingListPreview extends Component {
      */
     formatGridData(window, calculations) {
         try {
-            // 详细记录输入参数
-            console.log('formatGridData被调用，输入参数:', {
-                window: window ? {
-                    id: window.id,
-                    style: window.style,
-                    grid: window.grid,
-                    grid_size: window.grid_size,
-                    note: window.note,
-                    grid类型: typeof window.grid
-                } : 'undefined',
-                calculations: calculations ? {
-                    有gridList: !!calculations.gridList,
-                    gridList长度: calculations.gridList ? calculations.gridList.length : 0
-                } : 'undefined'
-            });
-            
             // 确保window存在
             if (!window) {
                 console.warn('window参数为空，无法格式化grid数据');
@@ -1127,8 +1111,6 @@ class CuttingListPreview extends Component {
                 console.warn('window没有grid或grid为no/none，跳过:', gridValue);
                 return null;
             }
-            
-            console.log('Formatting grid data for window:', window.id, 'Grid type:', gridValue);
             
             // Extract grid style and size information
             let gridStyle = gridValue;
@@ -1151,7 +1133,6 @@ class CuttingListPreview extends Component {
             
             // 使用计算模块返回的grid数据
             const gridData = calculations.gridList[0];
-            console.log('使用计算模块的grid数据:', gridData);
             
             // 从计算结果中提取数据
             let w1 = 0, w1Pcs = 0, h1 = 0, h1Pcs = 0;  // Sash grid dimensions
@@ -1159,7 +1140,6 @@ class CuttingListPreview extends Component {
             let holeW1 = 0, holeH1 = 0, holeW2 = 0, holeH2 = 0; // Hole dimensions
             
             if (gridData) {
-                // 提取嵌扇格子数据
                 // 提取嵌扇格子数据
                 w1 = gridData.sashgridw || 0;
                 w1Pcs = gridData.SashWq || 0;
@@ -1175,11 +1155,6 @@ class CuttingListPreview extends Component {
                 h2 = gridData.fixedgridh || 0;
                 h2Pcs = gridData.FixHq || 0;
                 holeH2 = gridData.holeH2 || 0;
-                
-                console.log('提取的grid数据:', {
-                    嵌扇: { w1, w1Pcs, h1, h1Pcs, holeW1, holeH1 },
-                    固定: { w2, w2Pcs, h2, h2Pcs, holeW2, holeH2 }
-                });
             } else {
                 console.warn('gridData为空，无法提取grid数据');
             }
@@ -1210,7 +1185,6 @@ class CuttingListPreview extends Component {
                 h2Cut: h2Pcs > 0 ? holeH2.toFixed(1) : ''
             };
             
-            console.log('formatGridData返回结果:', result);
             return result;
         } catch (error) {
             console.error('Error formatting grid data:', error);

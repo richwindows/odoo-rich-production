@@ -18,5 +18,19 @@
             <field name="name">Delivery Calendar</field>
             <field name="tag">rich_production.delivery_calendar_action</field>
         </record>
+
+        <!-- Action Window for window.calculation.formula -->
+        <record id="action_window_calculation_formula" model="ir.actions.act_window">
+            <field name="name">Window Calculation Formulas</field>
+            <field name="res_model">window.calculation.formula</field>
+            <field name="view_mode">list,form</field> <!-- Add form later if needed -->
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Create a new window calculation formula.
+                </p><p>
+                    Store and manage the JavaScript formulas used for window calculations.
+                </p>
+            </field>
+        </record>
     </data>
 </odoo> 

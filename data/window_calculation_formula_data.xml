@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1"> <!-- noupdate=1 ensures data is not overwritten on module update -->
+
+        <!-- Formulas for xo_ox_window - Nailon Type -->
+        <record id="formula_xo_ox_nailon_frameWidth" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">frameWidth</field>
+            <field name="formula_string">const frameWidth = mmToInch(widthMm + 3 * 2);</field>
+            <field name="sequence">10</field>
+            <field name="description">Calculate frame width (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_frameHeight" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">frameHeight</field>
+            <field name="formula_string">const frameHeight = mmToInch(heightMm + 3 * 2);</field>
+            <field name="sequence">20</field>
+            <field name="description">Calculate frame height (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_sashWidth" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">sashWidth</field>
+            <field name="formula_string">const sashWidth = mmToInch(widthMm / 2 - 14.5 - 15 + 1);</field>
+            <field name="sequence">30</field>
+            <field name="description">Calculate sash width (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_sashHeight" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">sashHeight</field>
+            <field name="formula_string">const sashHeight = mmToInch(heightMm - 46 - 15 * 2 - 2 - 1);</field>
+            <field name="sequence">40</field>
+            <field name="description">Calculate sash height (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_screenw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">screenw</field>
+            <field name="formula_string">const screenw = round(widthMm / 2 - 75 - 15 - (2), 0);</field>
+            <field name="sequence">50</field>
+            <field name="description">Calculate screen width (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_screenh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">screenh</field>
+            <field name="formula_string">const screenh = round(heightMm - 87 - 15 * 2 - (4), 0);</field>
+            <field name="sequence">60</field>
+            <field name="description">Calculate screen height (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_mullion" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">mullion</field>
+            <field name="formula_string">const mullion = round((heightMm - 36 - 15 * 2) / 25.4, 3);</field>
+            <field name="sequence">70</field>
+            <field name="description">Calculate mullion length (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_mullionA" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">mullionA</field>
+            <field name="formula_string">const mullionA = round((heightMm - 36 - 15 * 2) / 25.4 - 2, 1);</field>
+            <field name="sequence">80</field>
+            <field name="description">Calculate mullion aluminum length (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_handleA" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">handleA</field>
+            <field name="formula_string">const handleA = round((heightMm - 46 - 15 * 2) / 25.4 / 2 + 4, 0);</field>
+            <field name="sequence">90</field>
+            <field name="description">Calculate handle aluminum length (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_track" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">track</field>
+            <field name="formula_string">const track = round((widthMm - 14 * 2 - 15 * 2 - 3 - (20)) / 25.4, 1);</field>
+            <field name="sequence">100</field>
+            <field name="description">Calculate track length (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_sashglassw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">sashglassw</field>
+            <field name="formula_string">const sashglassw = round(widthMm / 2 - 77 - 15 + (3), 0);</field>
+            <field name="sequence">110</field>
+            <field name="description">Calculate sash glass width (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_sashglassh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">sashglassh</field>
+            <field name="formula_string">const sashglassh = round(heightMm - 109 - 15 * 2 - (3) - (2), 0);</field>
+            <field name="sequence">120</field>
+            <field name="description">Calculate sash glass height (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_fixedglassw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">fixedglassw</field>
+            <field name="formula_string">const fixedglassw = round(widthMm / 2 - 44 - 15, 0);</field>
+            <field name="sequence">130</field>
+            <field name="description">Calculate fixed glass width (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_fixedglassh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">fixedglassh</field>
+            <field name="formula_string">const fixedglassh = round(heightMm - 47 - 15 * 2 - (2), 0);</field>
+            <field name="sequence">140</field>
+            <field name="description">Calculate fixed glass height (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_sashgridw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">sashgridw</field>
+            <field name="formula_string">const sashgridw = round(sashglassw - 18 - (2), 0);</field>
+            <field name="sequence">150</field>
+            <field name="description">Calculate sash grid width (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_sashgridh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">sashgridh</field>
+            <field name="formula_string">const sashgridh = round(sashglassh - 18 - (2), 0);</field>
+            <field name="sequence">160</field>
+            <field name="description">Calculate sash grid height (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_fixedgridw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">fixedgridw</field>
+            <field name="formula_string">const fixedgridw = round(fixedglassw - 18 - (2), 0);</field>
+            <field name="sequence">170</field>
+            <field name="description">Calculate fixed grid width (Nailon)</field>
+        </record>
+
+        <record id="formula_xo_ox_nailon_fixedgridh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">nailon</field>
+            <field name="step_name">fixedgridh</field>
+            <field name="formula_string">const fixedgridh = round(fixedglassh - 18 - (2), 0);</field>
+            <field name="sequence">180</field>
+            <field name="description">Calculate fixed grid height (Nailon)</field>
+        </record>
+
+        <!-- Formulas for xo_ox_window - Other Type (calculate3Style) -->
+        <record id="formula_xo_ox_other_frameWidth" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">frameWidth</field>
+            <field name="formula_string">const frameWidth = mmToInch(widthMm + 3 * 2);</field>
+            <field name="sequence">200</field>
+            <field name="description">Calculate frame width (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_frameHeight" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">frameHeight</field>
+            <field name="formula_string">const frameHeight = mmToInch(heightMm + 3 * 2);</field>
+            <field name="sequence">210</field>
+            <field name="description">Calculate frame height (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_sashWidth" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">sashWidth</field>
+            <field name="formula_string">const sashWidth = mmToInch(widthMm / 2 - 14.5 + 1);</field>
+            <field name="sequence">220</field>
+            <field name="description">Calculate sash width (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_sashHeight" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">sashHeight</field>
+            <field name="formula_string">const sashHeight = mmToInch(heightMm - 46 - 2 - 1);</field>
+            <field name="sequence">230</field>
+            <field name="description">Calculate sash height (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_screenw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">screenw</field>
+            <field name="formula_string">const screenw = round(widthMm / 2 - 75 - (2), 0);</field>
+            <field name="sequence">240</field>
+            <field name="description">Calculate screen width (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_screenh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">screenh</field>
+            <field name="formula_string">const screenh = round(heightMm - 87 - (4), 0);</field>
+            <field name="sequence">250</field>
+            <field name="description">Calculate screen height (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_mullion" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">mullion</field>
+            <field name="formula_string">const mullion = round((heightMm - 36) / 25.4, 3);</field>
+            <field name="sequence">260</field>
+            <field name="description">Calculate mullion length (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_mullionA" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">mullionA</field>
+            <field name="formula_string">const mullionA = round((heightMm - 36) / 25.4 - 2, 1);</field>
+            <field name="sequence">270</field>
+            <field name="description">Calculate mullion aluminum length (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_handleA" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">handleA</field>
+            <field name="formula_string">const handleA = round((heightMm - 46) / 25.4 / 2 + 4, 0);</field>
+            <field name="sequence">280</field>
+            <field name="description">Calculate handle aluminum length (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_track" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">track</field>
+            <field name="formula_string">const track = round((widthMm - 14 * 2 - 3 - (20)) / 25.4, 1);</field>
+            <field name="sequence">290</field>
+            <field name="description">Calculate track length (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_sashglassw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">sashglassw</field>
+            <field name="formula_string">const sashglassw = widthMm / 2 - 77 + (3);</field>
+            <field name="sequence">300</field>
+            <field name="description">Calculate sash glass width (Other - Note: No rounding in original JS)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_sashglassh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">sashglassh</field>
+            <field name="formula_string">const sashglassh = heightMm - 109 - (3) - (2);</field>
+            <field name="sequence">310</field>
+            <field name="description">Calculate sash glass height (Other - Note: No rounding in original JS)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_fixedglassw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">fixedglassw</field>
+            <field name="formula_string">const fixedglassw = widthMm / 2 - 44;</field>
+            <field name="sequence">320</field>
+            <field name="description">Calculate fixed glass width (Other - Note: No rounding in original JS)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_fixedglassh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">fixedglassh</field>
+            <field name="formula_string">const fixedglassh = heightMm - 47 - (2);</field>
+            <field name="sequence">330</field>
+            <field name="description">Calculate fixed glass height (Other - Note: No rounding in original JS)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_sashgridw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">sashgridw</field>
+            <field name="formula_string">const sashgridw = round(sashglassw - 18 - (2), 0);</field>
+            <field name="sequence">340</field>
+            <field name="description">Calculate sash grid width (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_sashgridh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">sashgridh</field>
+            <field name="formula_string">const sashgridh = round(sashglassh - 18 - (2), 0);</field>
+            <field name="sequence">350</field>
+            <field name="description">Calculate sash grid height (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_fixedgridw" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">fixedgridw</field>
+            <field name="formula_string">const fixedgridw = round(fixedglassw - 18 - (2), 0);</field>
+            <field name="sequence">360</field>
+            <field name="description">Calculate fixed grid width (Other)</field>
+        </record>
+
+        <record id="formula_xo_ox_other_fixedgridh" model="window.calculation.formula">
+            <field name="style_name">xo_ox_window</field>
+            <field name="formula_type">other</field>
+            <field name="step_name">fixedgridh</field>
+            <field name="formula_string">const fixedgridh = round(fixedglassh - 18 - (2), 0);</field>
+            <field name="sequence">370</field>
+            <field name="description">Calculate fixed grid height (Other)</field>
+        </record>
+
+    </data>
+</odoo> 

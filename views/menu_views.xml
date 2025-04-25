@@ -34,4 +34,11 @@
           action="rich_production.action_delivery_fullcalendar_view"
           sequence="25"/>
 
+<!-- Window Calculation Formula 子菜单 -->
+<menuitem id="menu_window_calculation_formula"
+          name="Window Calculation"
+          parent="menu_rich_production_root"
+          action="action_window_calculation_formula"
+          sequence="30"/>
+
 </odoo> 

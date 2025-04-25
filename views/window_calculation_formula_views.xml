@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- List View for window.calculation.formula -->
+        <record id="view_window_calculation_formula_tree" model="ir.ui.view">
+            <field name="name">window.calculation.formula.list</field>
+            <field name="model">window.calculation.formula</field>
+            <field name="arch" type="xml">
+                <list string="Window Calculation Formula">
+                    <field name="sequence" widget="handle"/>
+                    <field name="style_name"/>
+                    <field name="formula_type"/>
+                    <field name="step_name"/>
+                    <field name="formula_string"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_window_calculation_formula_form" model="ir.ui.view">
+            <field name="name">window.calculation.formula.form</field>
+            <field name="model">window.calculation.formula</field>
+            <field name="arch" type="xml">
+                <form string="Window Calculation Formula">
+                    <sheet>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="style_name"/>
+                            <field name="formula_type"/>
+                            <field name="step_name"/>
+                            <field name="formula_string"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+    </data>
+</odoo> 

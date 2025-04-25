@@ -6,3 +6,4 @@ from . import res_lang
 from . import models
 from . import account_move
 from . import production
+from . import window_calculation_formula
