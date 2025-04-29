@@ -11,3 +11,5 @@ access_window_screen_data,window.screen.data,rich_production.model_window_screen
 access_window_parts_data,window.parts.data,rich_production.model_window_parts_data,base.group_user,1,1,1,1
 access_window_glass_data,window.glass.data,rich_production.model_window_glass_data,base.group_user,1,1,1,1
 access_window_grid_data,window.grid.data,rich_production.model_window_grid_data,base.group_user,1,1,1,1
+access_window_general_info,access_window_general_info,model_window_general_info,base.group_user,1,1,1,1
+access_rich_production_material_config,access_rich_production_material_config,model_rich_production_material_config,base.group_user,1,1,1,1

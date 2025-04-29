@@ -103,6 +103,11 @@
                                 t-on-click="() => this.state.activeTab = 'sash-welder'">
                                 Sash Welder
                             </button>
+                            <button class="btn mx-1"
+                                t-att-class="state.activeTab === 'deca' ? 'btn-danger active-tab' : 'btn-outline-danger'"
+                                t-on-click="() => this.state.activeTab = 'deca'">
+                                DECA
+                            </button>
                         </div>
                     </div>
                     
@@ -638,6 +643,84 @@
                                             <td><t t-esc="item.id || ''"/></td>
                                         </tr>
                                     </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- DECA数据表 -->
+                    <div t-if="state.activeTab === 'deca'" class="o_production_cutting_list_preview_content">
+                        <div class="table-responsive">
+                            <h3 class="mt-3">DECA Data Table</h3>
+                            <div class="mb-3">
+                                <button class="btn btn-primary" t-on-click="onDownloadDecaCSV">
+                                    <i class="fa fa-download mr-1"></i> Export CSV
+                                </button>
+                            </div>
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Batch No</th>
+                                        <th>Order No</th>
+                                        <th>Order Item</th>
+                                        <th>Material Name</th>
+                                        <th>Cutting ID</th>
+                                        <th>Pieces ID</th>
+                                        <th>Length</th>
+                                        <th>Angles</th>
+                                        <th>Qty</th>
+                                        <th>Bin No</th>
+                                        <th>Cart No</th>
+                                        <th>Position</th>
+                                        <th>Label Print</th>
+                                        <th>Barcode No</th>
+                                        <th>PO No</th>
+                                        <th>Style</th>
+                                        <th>Frame</th>
+                                        <th>Product Size</th>
+                                        <th>Color</th>
+                                        <th>Grid</th>
+                                        <th>Glass</th>
+                                        <th>Argon</th>
+                                        <th>Painting</th>
+                                        <th>Product D Balance</th>
+                                        <th>Shift</th>
+                                        <th>Ship date</th>
+                                        <th>Note</th>
+                                        <th>Customer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="this.getDecaDataTable()" t-as="item" t-key="item_index">
+                                        <td><t t-esc="item.batchNo"/></td>
+                                        <td><t t-esc="item.orderNo"/></td>
+                                        <td><t t-esc="item.orderItem"/></td>
+                                        <td><t t-esc="item.materialName"/></td>
+                                        <td><t t-esc="item.cuttingID"/></td>
+                                        <td><t t-esc="item.piecesID"/></td>
+                                        <td><t t-esc="item.length"/></td>
+                                        <td><t t-esc="item.angles"/></td>
+                                        <td><t t-esc="item.qty"/></td>
+                                        <td><t t-esc="item.binNo"/></td>
+                                        <td><t t-esc="item.cartNo"/></td>
+                                        <td><t t-esc="item.position"/></td>
+                                        <td><t t-esc="item.labelPrint"/></td>
+                                        <td><t t-esc="item.barcodeNo"/></td>
+                                        <td><t t-esc="item.poNo"/></td>
+                                        <td><t t-esc="item.style"/></td>
+                                        <td><t t-esc="item.frame"/></td>
+                                        <td><t t-esc="item.productSize"/></td>
+                                        <td><t t-esc="item.color"/></td>
+                                        <td><t t-esc="item.grid"/></td>
+                                        <td><t t-esc="item.glass"/></td>
+                                        <td><t t-esc="item.argon"/></td>
+                                        <td><t t-esc="item.painting"/></td>
+                                        <td><t t-esc="item.productDBalance"/></td>
+                                        <td><t t-esc="item.shift"/></td>
+                                        <td><t t-esc="item.shipDate"/></td>
+                                        <td><t t-esc="item.note"/></td>
+                                        <td><t t-esc="item.customer"/></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>

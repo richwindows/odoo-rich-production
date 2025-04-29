@@ -52,6 +52,11 @@ class CuttingListReport(models.TransientModel):
         self._create_general_info_sheet(workbook, production)
         self._create_sash_welder_sheet(workbook, production)
         
+        # 创建DECA数据工作表
+        deca_worksheet = workbook.add_worksheet('DECA Data')
+        styles = self._get_workbook_styles(workbook)
+        self._setup_deca_data_sheet(deca_worksheet, styles, production)
+        
         # 关闭工作簿并获取内容
         workbook.close()
         output.seek(0)
@@ -362,6 +367,128 @@ class CuttingListReport(models.TransientModel):
             
         return sash_welder_worksheet
     
+    def _setup_deca_data_sheet(self, worksheet, styles, production):
+        """设置DECA数据工作表的内容"""
+        _logger = logging.getLogger(__name__)
+        
+        # 设置列宽
+        worksheet.set_column('A:A', 15)  # Batch No列宽
+        worksheet.set_column('B:B', 15)  # Order No列宽
+        worksheet.set_column('C:C', 12)  # Order Item列宽
+        worksheet.set_column('D:D', 15)  # Material Name列宽
+        worksheet.set_column('E:E', 15)  # Cutting ID Pieces ID列宽
+        worksheet.set_column('F:F', 10)  # Length列宽
+        worksheet.set_column('G:G', 10)  # Angles列宽
+        worksheet.set_column('H:H', 10)  # Qty列宽
+        worksheet.set_column('I:I', 10)  # Bin No列宽
+        worksheet.set_column('J:J', 10)  # Cart No列宽
+        worksheet.set_column('K:K', 15)  # Position列宽
+        worksheet.set_column('L:L', 12)  # Label Print列宽
+        worksheet.set_column('M:M', 15)  # Barcode No列宽
+        worksheet.set_column('N:N', 10)  # PO No列宽
+        worksheet.set_column('O:O', 10)  # Style列宽
+        worksheet.set_column('P:P', 10)  # Frame列宽
+        worksheet.set_column('Q:Q', 15)  # Product Size列宽
+        worksheet.set_column('R:R', 10)  # Color列宽
+        worksheet.set_column('S:S', 10)  # Grid列宽
+        worksheet.set_column('T:T', 10)  # Glass列宽
+        worksheet.set_column('U:U', 10)  # Argon列宽
+        worksheet.set_column('V:V', 12)  # Painting列宽
+        worksheet.set_column('W:W', 15)  # Product Dimensions列宽
+        worksheet.set_column('X:X', 10)  # Balance列宽
+        worksheet.set_column('Y:Y', 10)  # Shift列宽
+        worksheet.set_column('Z:Z', 15)  # Ship date列宽
+        worksheet.set_column('AA:AA', 15)  # Note列宽
+        worksheet.set_column('AB:AB', 15)  # Customer列宽
+        
+        # 添加标题
+        worksheet.merge_range('A1:AB1', 'DECA Data', styles['title_style'])
+        
+        # 添加批次号
+        worksheet.merge_range('A2:B2', 'Batch NO.', styles['batch_style'])
+        worksheet.merge_range('C2:F2', production.batch_number or '', styles['batch_style'])
+        
+        # 添加表头
+        headers = ['Batch No', 'Order No', 'Order Item', 'Material Name', 'Cutting ID Pieces ID', 
+                  'Length', 'Angles', 'Qty', 'Bin No', 'Cart No', 'Position', 'Label Print', 
+                  'Barcode No', 'PO No', 'Style', 'Frame', 'Product Size', 'Color', 'Grid', 
+                  'Glass', 'Argon', 'Painting', 'Product Dimensions', 'Balance', 'Shift', 
+                  'Ship date', 'Note', 'Customer']
+        for col, header in enumerate(headers):
+            worksheet.write(3, col, header, styles['header_style'])
+            
+        # 获取DECA数据
+        try:
+            # 从计算结果中获取框架数据并转换为DECA数据格式
+            row = 4
+            if production.result_ids:
+                for result in production.result_ids:
+                    if result.frame_ids:
+                        # 获取窗户基本信息
+                        style = ''
+                        color = ''
+                        grid = ''
+                        glass = ''
+                        argon = False
+                        product_size = ''
+                        customer = ''
+                        
+                        if result.general_info_ids:
+                            general_info = result.general_info_ids[0]
+                            style = general_info.style or ''
+                            color = general_info.color or ''
+                            grid = general_info.grid or ''
+                            glass = general_info.glass or ''
+                            argon = general_info.argon or False
+                            customer = general_info.customer or ''
+                            if general_info.width and general_info.height:
+                                product_size = f"{general_info.width}x{general_info.height}"
+                        
+                        # 处理每个框架数据
+                        for frame in result.frame_ids:
+                            # 确定位置
+                            position = 'TOP+BOT'
+                            if frame.position == '|':
+                                position = 'LEFT+RIGHT'
+                            elif frame.position == '--':
+                                position = 'TOP+BOT'
+                            else:
+                                position = frame.position
+                            
+                            # 填充DECA数据行
+                            worksheet.write(row, 0, production.batch_number or '', styles['cell_style'])  # Batch No
+                            worksheet.write(row, 1, production.id or '', styles['cell_style'])  # Order No
+                            worksheet.write(row, 2, frame.item_id or '', styles['cell_style'])  # Order Item
+                            worksheet.write(row, 3, frame.material or '', styles['cell_style'])  # Material Name
+                            worksheet.write(row, 4, '', styles['cell_style'])  # Cutting ID Pieces ID
+                            worksheet.write(row, 5, frame.length or '', styles['cell_style'])  # Length
+                            worksheet.write(row, 6, 'V' if frame.position == '|' else 'H', styles['cell_style'])  # Angles
+                            worksheet.write(row, 7, frame.quantity or 1, styles['cell_style'])  # Qty
+                            worksheet.write(row, 8, production.id or '', styles['cell_style'])  # Bin No
+                            worksheet.write(row, 9, '', styles['cell_style'])  # Cart No
+                            worksheet.write(row, 10, position, styles['cell_style'])  # Position
+                            worksheet.write(row, 11, '', styles['cell_style'])  # Label Print
+                            worksheet.write(row, 12, '', styles['cell_style'])  # Barcode No
+                            worksheet.write(row, 13, '', styles['cell_style'])  # PO No
+                            worksheet.write(row, 14, style, styles['cell_style'])  # Style
+                            worksheet.write(row, 15, frame.material or '', styles['cell_style'])  # Frame
+                            worksheet.write(row, 16, product_size, styles['cell_style'])  # Product Size
+                            worksheet.write(row, 17, color, styles['cell_style'])  # Color
+                            worksheet.write(row, 18, grid, styles['cell_style'])  # Grid
+                            worksheet.write(row, 19, glass, styles['cell_style'])  # Glass
+                            worksheet.write(row, 20, 'Yes' if argon else '', styles['cell_style'])  # Argon
+                            worksheet.write(row, 21, '', styles['cell_style'])  # Painting
+                            worksheet.write(row, 22, '', styles['cell_style'])  # Product Dimensions
+                            worksheet.write(row, 23, '', styles['cell_style'])  # Balance
+                            worksheet.write(row, 24, '', styles['cell_style'])  # Shift
+                            worksheet.write(row, 25, '', styles['cell_style'])  # Ship date
+                            worksheet.write(row, 26, '', styles['cell_style'])  # Note
+                            worksheet.write(row, 27, customer, styles['cell_style'])  # Customer
+                            
+                            row += 1
+        except Exception as e:
+            _logger.exception(f"生成DECA数据表格时出错: {e}")
+    
     def generate_single_sheet_report(self, sheet_name):
         """生成单个工作表的Excel报表"""
         self.ensure_one()
@@ -431,6 +558,14 @@ class CuttingListReport(models.TransientModel):
             # 设置表头和数据
             self._setup_glass_data_sheet(worksheet, styles, production)
             filename = f"Glass_Data_{production.batch_number or datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        elif sheet_name == 'deca_data':
+            # 创建DECA数据工作表
+            worksheet = workbook.add_worksheet('DECA Data')
+            styles = self._get_workbook_styles(workbook)
+            
+            # 设置表头和数据
+            self._setup_deca_data_sheet(worksheet, styles, production)
+            filename = f"DECA_Data_{production.batch_number or datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         else:
             raise UserError(_("不支持的工作表名称"))
         
@@ -679,6 +814,25 @@ class CuttingListReport(models.TransientModel):
         """下载Sash Welder工作表"""
         self.ensure_one()
         result = self.generate_single_sheet_report('sash_welder')
+        
+        # 保存临时文件
+        attachment = self.env['ir.attachment'].create({
+            'name': result['filename'],
+            'datas': result['file_content'],
+            'type': 'binary',
+        })
+        
+        # 返回下载URL
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f"/web/content/{attachment.id}?download=true",
+            'target': 'self',
+        }
+
+    def action_download_deca_data(self):
+        """下载DECA Data工作表"""
+        self.ensure_one()
+        result = self.generate_single_sheet_report('deca_data')
         
         # 保存临时文件
         attachment = self.env['ir.attachment'].create({

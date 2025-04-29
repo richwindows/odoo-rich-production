@@ -29,12 +29,16 @@
 
 /* Extra info display */
 .fc-event-extra-info {
-    font-size: 0.8em;
-    opacity: 0.85;
-    margin-top: 1px;
+    font-size: 0.85em;
+    line-height: 1.3;
+    margin-top: 4px;
+}
+
+.fc-event-extra-info > div {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 2px;
 }
 
 /* Day cell styling */
@@ -366,4 +370,63 @@
     color: white !important;
     font-size: 16px !important;
     margin-right: 4px !important;
+}
+
+/* 增强日历事件样式 */
+.rich-calendar-event {
+    border-radius: 6px !important;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.rich-calendar-event .fc-event-title {
+    font-size: 1.1em;
+    font-weight: 700;
+    line-height: 1.2;
+    padding: 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rich-calendar-event .fc-event-customer {
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.rich-calendar-event .fc-event-batch {
+    font-weight: 500;
+    font-style: italic;
+}
+
+.rich-calendar-event .fc-event-state {
+    font-weight: 600;
+    font-size: 0.85em;
+    margin-top: 2px;
+    border-radius: 4px;
+    display: inline-block;
+    padding: 1px 4px;
+}
+
+/* 调整事件内部间距 */
+.fc-event {
+    padding: 6px 8px !important;
+}
+
+/* 优化月视图事件显示 */
+.fc-dayGridMonth-view .fc-daygrid-event {
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+/* 优化日视图事件显示 */
+.fc-timeGridDay-view .fc-event,
+.fc-timeGridWeek-view .fc-event {
+    padding: 6px 8px !important;
+}
+
+/* 调整月视图单元格高度 */
+.fc-dayGridMonth-view .fc-daygrid-day-frame {
+    min-height: 150px !important; /* 增加月视图单元格最小高度 */
+    padding: 6px 4px;
 } 

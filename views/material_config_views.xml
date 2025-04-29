@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 材料配置树状视图 -->
+    <record id="view_material_config_tree" model="ir.ui.view">
+        <field name="name">rich_production.material.config.tree</field>
+        <field name="model">rich_production.material.config</field>
+        <field name="arch" type="xml">
+            <tree string="材料配置" sample="1">
+                <field name="material_id"/>
+                <field name="length"/>
+                <field name="description"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- 材料配置表单视图 -->
+    <record id="view_material_config_form" model="ir.ui.view">
+        <field name="name">rich_production.material.config.form</field>
+        <field name="model">rich_production.material.config</field>
+        <field name="arch" type="xml">
+            <form string="材料配置">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="material_id"/>
+                            <field name="length"/>
+                        </group>
+                        <group>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="描述" name="description">
+                            <field name="description" placeholder="输入关于此材料的描述信息..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- 材料配置搜索视图 -->
+    <record id="view_material_config_search" model="ir.ui.view">
+        <field name="name">rich_production.material.config.search</field>
+        <field name="model">rich_production.material.config</field>
+        <field name="arch" type="xml">
+            <search string="搜索材料配置">
+                <field name="material_id"/>
+                <field name="description"/>
+                <filter string="有效材料" name="active" domain="[('active', '=', True)]"/>
+                <filter string="归档材料" name="inactive" domain="[('active', '=', False)]"/>
+                <group expand="0" string="分组">
+                    <filter string="材料ID" name="group_by_material_id" context="{'group_by': 'material_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- 材料配置动作 -->
+    <record id="action_material_config" model="ir.actions.act_window">
+        <field name="name">材料配置</field>
+        <field name="res_model">rich_production.material.config</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                创建第一个材料配置记录
+            </p><p>
+                定义不同材料的标准长度和其他属性。
+            </p>
+        </field>
+    </record>
+
+    <!-- 添加到菜单 -->
+    <menuitem id="menu_material_config"
+              name="材料配置"
+              parent="menu_rich_production_config"
+              action="action_material_config"
+              sequence="40"/>
+</odoo> 

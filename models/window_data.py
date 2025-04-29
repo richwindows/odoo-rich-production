@@ -6,32 +6,23 @@ _logger = logging.getLogger(__name__)
 
 class WindowCalculationResult(models.Model):
     _name = 'window.calculation.result'
-    _description = '窗户计算结果'
+    _description = 'Window Calculation Result'
     
-    name = fields.Char(string='名称', required=True)
-    production_id = fields.Many2one('rich.production.production', string='生产订单')
-    result_json = fields.Text(string='计算结果JSON')
-    window_line_id = fields.Many2one('rich_production.line', string='窗户行')
+    name = fields.Char('Name', compute='_compute_name', store=True)
+    production_id = fields.Many2one('window.production', string='Production', ondelete='cascade')
+    result_json = fields.Text('Result JSON')
+    calculation_date = fields.Datetime('Calculation Date', default=fields.Datetime.now)
     
-    # 基本信息
-    style = fields.Char(string='风格')
-    frame_type = fields.Char(string='框架类型')
-    width = fields.Float(string='宽度')
-    height = fields.Float(string='高度')
-    
-    # 存储计算结果 (JSON格式)
-    calculation_data = fields.Text(string='计算结果', help='JSON格式的计算结果数据')
-    
-    # 关联记录
-    general_info_ids = fields.One2many('window.general.info', 'calculation_id', string='常规信息')
-    frame_ids = fields.One2many('window.frame.data', 'calculation_id', string='框架数据')
-    sash_ids = fields.One2many('window.sash.data', 'calculation_id', string='嵌扇数据')
-    screen_ids = fields.One2many('window.screen.data', 'calculation_id', string='屏幕数据')
-    parts_ids = fields.One2many('window.parts.data', 'calculation_id', string='零部件数据')
-    glass_ids = fields.One2many('window.glass.data', 'calculation_id', string='玻璃数据')
-    grid_ids = fields.One2many('window.grid.data', 'calculation_id', string='网格数据')
-    label_ids = fields.One2many('window.label.data', 'calculation_id', string='标签数据')
-    welder_ids = fields.One2many('window.welder.data', 'calculation_id', string='焊接器数据')
+    frame_ids = fields.One2many('window.frame.data', 'calculation_id', string='Frame Data')
+    sash_ids = fields.One2many('window.sash.data', 'calculation_id', string='Sash Data')
+    screen_ids = fields.One2many('window.screen.data', 'calculation_id', string='Screen Data')
+    parts_ids = fields.One2many('window.parts.data', 'calculation_id', string='Parts Data')
+    glass_ids = fields.One2many('window.glass.data', 'calculation_id', string='Glass Data')
+    grid_ids = fields.One2many('window.grid.data', 'calculation_id', string='Grid Data')
+    general_info_ids = fields.One2many('window.general.info', 'calculation_id', string='General Info')
+    label_ids = fields.One2many('window.label.data', 'calculation_id', string='Label Data')
+    window_line_id = fields.Many2one('window.production.line', string='Window Line')
+    deca_ids = fields.One2many('window.deca.data', 'calculation_id', string='DECA Data')
     
     has_cached_data = fields.Boolean(string='有缓存数据', default=False)
     
@@ -1309,47 +1300,132 @@ class WindowCalculationResult(models.Model):
         return {'success': True}
 
     @api.model
-    def save_multiple_calculations(self, windows_data):
+    def save_multiple_calculations(self, calculation_data_list):
+        """批量保存多个窗户的计算结果
+        
+        Args:
+            calculation_data_list (list): 包含多个窗户计算结果的列表
+                每个元素是一个字典，包含窗户ID和计算数据
+                示例: [{'windowId': 123, 'calculations': {...计算数据...}}, ...]
+        
+        Returns:
+            dict: 包含成功和失败信息的字典
         """
-        保存多个窗户计算结果
-        :param windows_data: 包含窗户ID和计算数据的字典列表 [{'window_id': id, 'calculation_data': data}, ...]
-        :return: 每个窗户的保存结果 {window_id: result, ...}
-        """
-        _logger.info(f"开始批量保存窗户计算结果，窗户数量: {len(windows_data)}")
-        result = {}
+        if not calculation_data_list or not isinstance(calculation_data_list, list):
+            return {
+                'success': False,
+                'message': _('Invalid calculation data format'),
+                'saved_count': 0,
+                'failed_count': 0,
+                'errors': []
+            }
+        
+        _logger.info("批量保存%s个窗户的计算结果", len(calculation_data_list))
+        
+        saved_count = 0
+        failed_count = 0
+        errors = []
+        
+        # 使用事务处理批量保存
+        for item in calculation_data_list:
+            try:
+                window_id = item.get('windowId')
+                calculations = item.get('calculations', {})
+                
+                if not window_id or not calculations:
+                    _logger.warning("跳过无效的计算数据: %s", item)
+                    failed_count += 1
+                    errors.append({
+                        'window_id': window_id,
+                        'message': _('Missing window ID or calculation data')
+                    })
+                    continue
+                
+                # 保存单个计算结果
+                result = self.save_calculation(window_id, calculations)
+                
+                if result.get('success'):
+                    saved_count += 1
+                else:
+                    failed_count += 1
+                    errors.append({
+                        'window_id': window_id,
+                        'message': result.get('message', _('Unknown error'))
+                    })
+                
+            except Exception as e:
+                _logger.exception("保存窗户计算结果时出错: %s", str(e))
+                failed_count += 1
+                errors.append({
+                    'window_id': item.get('windowId'),
+                    'message': str(e)
+                })
+        
+        return {
+            'success': failed_count == 0,
+            'message': _('Saved %s window calculations, %s failed') % (saved_count, failed_count),
+            'saved_count': saved_count,
+            'failed_count': failed_count,
+            'errors': errors
+        }
+    
+    def save_calculation(self, window_id=None, calculation_data=None):
+        """保存计算结果"""
+        if not window_id or not calculation_data:
+            _logger.warning("无法保存计算结果: window_id=%s, 数据大小=%s", 
+                           window_id, len(str(calculation_data)) if calculation_data else 0)
+            return {
+                'success': False,
+                'message': _('Missing window ID or calculation data')
+            }
         
         try:
-            # 使用一个事务处理所有窗户
-            with self.env.cr.savepoint():
-                for window_item in windows_data:
-                    window_id = window_item.get('window_id')
-                    calculation_data = window_item.get('calculation_data')
-                    
-                    if not window_id or not calculation_data:
-                        _logger.warning(f"跳过无效的窗户数据项: {window_item}")
-                        result[str(window_id) if window_id else 'unknown'] = {'error': '窗户ID或计算数据缺失'}
-                        continue
-                    
-                    _logger.info(f"处理窗户ID: {window_id}")
-                    save_result = self.save_calculation(window_id, calculation_data)
-                    result[str(window_id)] = save_result
-                    
-                    if 'error' in save_result:
-                        _logger.warning(f"窗户ID={window_id} 计算结果保存失败: {save_result}")
-                    else:
-                        _logger.info(f"窗户ID={window_id} 计算结果保存成功")
-                
-                _logger.info(f"所有窗户计算结果处理完成，提交事务")
+            # 查询窗户行
+            window_line = self.env['window.production.line'].browse(window_id)
+            if not window_line.exists():
+                _logger.warning("无法找到窗户行记录 ID=%s", window_id)
+                return {
+                    'success': False,
+                    'message': _('Window line not found')
+                }
             
-            # 记录最终结果
-            success_count = sum(1 for r in result.values() if r.get('success', False))
-            error_count = len(result) - success_count
-            _logger.info(f"批量保存完成: 成功 {success_count}，失败 {error_count}")
+            # 创建一个新的计算结果记录
+            result = self.env['window.calculation.result'].create({
+                'production_id': window_line.production_id.id,
+                'window_line_id': window_line.id,
+                'result_json': json.dumps(calculation_data)
+            })
             
-            return result
+            # 保存各类数据
+            self._save_general_info(calculation_data.get('formattedWindowInfo', calculation_data.get('windowInfo', {})), result.id)
+            self._save_frame_data(calculation_data.get('frame', []), result.id)
+            self._save_sash_data(calculation_data.get('sash', []), result.id)
+            self._save_screen_data(calculation_data.get('screen', []), result.id)
+            self._save_parts_data(calculation_data.get('parts', []), result.id)
+            self._save_glass_data(calculation_data.get('glass', []), result.id)
+            self._save_grid_data(calculation_data.get('grid', []), result.id)
+            self._save_label_data(calculation_data.get('labelInfo', {}), result.id)
+            self._save_deca_data(calculation_data.get('formattedDeca', []), result.id)
+            
+            # 关联计算结果到窗户行
+            window_line.write({
+                'calculation_id': result.id,
+                'calculation_json': json.dumps(calculation_data)
+            })
+            
+            _logger.info("成功保存窗户计算结果 ID=%s", result.id)
+            return {
+                'success': True,
+                'message': _('Calculation saved successfully'),
+                'result_id': result.id
+            }
+        
         except Exception as e:
-            _logger.error(f"批量保存窗户计算结果错误: {str(e)}")
-            return {'error': f"批量保存失败: {str(e)}"}
+            _logger.exception("保存计算结果时出错: %s", str(e))
+            return {
+                'success': False,
+                'message': _('Error saving calculation: %s') % str(e)
+            }
 
     @api.model
     def get_batch_calculation_results(self, batch_number):
@@ -1393,187 +1469,29 @@ class WindowCalculationResult(models.Model):
 
 class WindowFrameData(models.Model):
     _name = 'window.frame.data'
-    _description = '窗户框架数据'
-    _rec_name = 'batch'  # 使用batch作为记录名称
+    _description = 'Window Frame Data'
     
-    calculation_id = fields.Many2one('window.calculation.result', string='计算结果', ondelete='cascade')
-    result_id = fields.Many2one('window.calculation.result', string='计算结果', ondelete='cascade')
+    calculation_id = fields.Many2one('window.calculation.result', string='Calculation Result', ondelete='cascade')
+    result_id = fields.Many2one('window.calculation.result', string='Result', related='calculation_id', store=True)
+    material = fields.Char('Material')
+    position = fields.Char('Position')
+    length = fields.Float('Length')
+    qty = fields.Integer('Quantity')
+    is_summary = fields.Boolean('Is Summary', default=False)
     
-    # 基本信息
-    batch = fields.Char(string='批次')
-    style = fields.Char(string='风格')
-    color = fields.Char(string='颜色')
-    item_id = fields.Integer(string='ID')
-    frameType = fields.Char(string='框架类型')  # 添加框架类型字段
+    # 框架材料长度字段
+    frame_82_01 = fields.Float('82-01', default=0.0)
+    frame_82_02 = fields.Float('82-02', default=0.0)
+    frame_82_02b = fields.Float('82-02B', default=0.0)
+    frame_82_10 = fields.Float('82-10', default=0.0)
+    frame_82_11 = fields.Float('82-11', default=0.0)
     
-    # 82-02B系列
-    frame_82_02b = fields.Float(string='82-02B--', help='82-02B系列水平框架')
-    frame_82_02b_pcs = fields.Integer(string='82-02BPcs', help='82-02B系列水平框架数量')
-    frame_82_02b_vertical = fields.Float(string='82-02B|', help='82-02B系列垂直框架')
-    frame_82_02b_vertical_pcs = fields.Integer(string='82-02B|Pcs', help='82-02B系列垂直框架数量')
-    
-    # 82-10系列
-    frame_82_10 = fields.Float(string='82-10--', help='82-10系列水平框架')
-    frame_82_10_pcs = fields.Integer(string='82-10Pcs', help='82-10系列水平框架数量')
-    frame_82_10_vertical = fields.Float(string='82-10|', help='82-10系列垂直框架')
-    frame_82_10_vertical_pcs = fields.Integer(string='82-10|Pcs', help='82-10系列垂直框架数量')
-    
-    # 82-01系列
-    frame_82_01 = fields.Float(string='82-01--', help='82-01系列水平框架')
-    frame_82_01_pcs = fields.Integer(string='82-01Pcs', help='82-01系列水平框架数量')
-    frame_82_01_vertical = fields.Float(string='82-01|', help='82-01系列垂直框架')
-    frame_82_01_vertical_pcs = fields.Integer(string='82-01|Pcs', help='82-01系列垂直框架数量')
- 
-    
-    # 兼容旧字段
-    material = fields.Char(string='材料')
-    position = fields.Char(string='位置')
-    length = fields.Float(string='长度')
-    qty = fields.Integer(string='数量')
-    name = fields.Char(string='名称')
-    width = fields.Float(string='宽度')
-    height = fields.Float(string='高度')
-    quantity = fields.Integer(string='数量', default=1)
-    data_json = fields.Text(string='原始数据')
-    
-    def _get_frame_values(self):
-        """获取框架值的汇总信息"""
-        self.ensure_one()
-        values = []
-        
-        # 添加82-02B系列
-        if self.frame_82_02b > 0:
-            values.append(f"82-02B--: {self.frame_82_02b:.2f}x{self.frame_82_02b_pcs}")
-        if self.frame_82_02b_vertical > 0:
-            values.append(f"82-02B|: {self.frame_82_02b_vertical:.2f}x{self.frame_82_02b_vertical_pcs}")
-            
-        # 添加82-10系列
-        if self.frame_82_10 > 0:
-            values.append(f"82-10--: {self.frame_82_10:.2f}x{self.frame_82_10_pcs}")
-        if self.frame_82_10_vertical > 0:
-            values.append(f"82-10|: {self.frame_82_10_vertical:.2f}x{self.frame_82_10_vertical_pcs}")
-            
-        # 添加82-01系列
-        if self.frame_82_01 > 0:
-            values.append(f"82-01--: {self.frame_82_01:.2f}x{self.frame_82_01_pcs}")
-        if self.frame_82_01_vertical > 0:
-            values.append(f"82-01|: {self.frame_82_01_vertical:.2f}x{self.frame_82_01_vertical_pcs}")
-            
-        return ", ".join(values) if values else "无框架数据"
-        
-    @api.model
-    def create_from_data(self, data, calculation_id=None, result_id=None):
-        """从字典数据创建记录"""
-        if not data:
-            return False
-            
-        try:
-            # 创建基本值
-            vals = {
-                'calculation_id': calculation_id,
-                'result_id': result_id,
-                'batch': self._safe_str(data.get('batch')),
-                'style': self._safe_str(data.get('style')),
-                'color': self._safe_str(data.get('color')),
-                'item_id': self._safe_int(data.get('id')),
-                'frameType': self._safe_str(data.get('frameType')),
-                'data_json': json.dumps(data)
-            }
-            
-            # 处理不同的数据格式
-            if 'material' in data and 'position' in data:
-                # 处理传统格式数据
-                material = self._safe_str(data.get('material'))
-                position = self._safe_str(data.get('position'))
-                length = self._safe_float(data.get('length'))
-                qty = self._safe_int(data.get('qty'))
-                
-                # 设置兼容字段
-                vals.update({
-                    'material': material,
-                    'position': position,
-                    'length': length,
-                    'qty': qty
-                })
-                
-                # 映射到结构化字段
-                if material == '82-02B' or material == '82-02':
-                    if position == '--' or position == 'horizontal':
-                        vals['frame_82_02b'] = length
-                        vals['frame_82_02b_pcs'] = qty
-                    elif position == '|' or position == 'vertical':
-                        vals['frame_82_02b_vertical'] = length
-                        vals['frame_82_02b_vertical_pcs'] = qty
-                elif material == '82-10':
-                    if position == '--' or position == 'horizontal':
-                        vals['frame_82_10'] = length
-                        vals['frame_82_10_pcs'] = qty
-                    elif position == '|' or position == 'vertical':
-                        vals['frame_82_10_vertical'] = length
-                        vals['frame_82_10_vertical_pcs'] = qty
-                elif material == '82-01':
-                    if position == '--' or position == 'horizontal':
-                        vals['frame_82_01'] = length
-                        vals['frame_82_01_pcs'] = qty
-                    elif position == '|' or position == 'vertical':
-                        vals['frame_82_01_vertical'] = length
-                        vals['frame_82_01_vertical_pcs'] = qty
-            else:
-                # 处理格式化数据 (更直接的格式)
-                vals.update({
-                    # 82-02B系列
-                    'frame_82_02b': self._safe_float(data.get('82-02B--')),
-                    'frame_82_02b_pcs': self._safe_int(data.get('82-02BPcs')),
-                    'frame_82_02b_vertical': self._safe_float(data.get('82-02B|')),
-                    'frame_82_02b_vertical_pcs': self._safe_int(data.get('82-02B|Pcs')),
-                    
-                    # 82-10系列
-                    'frame_82_10': self._safe_float(data.get('82-10--')),
-                    'frame_82_10_pcs': self._safe_int(data.get('82-10Pcs')),
-                    'frame_82_10_vertical': self._safe_float(data.get('82-10|')),
-                    'frame_82_10_vertical_pcs': self._safe_int(data.get('82-10|Pcs')),
-                    
-                    # 82-01系列
-                    'frame_82_01': self._safe_float(data.get('82-01--')),
-                    'frame_82_01_pcs': self._safe_int(data.get('82-01Pcs')),
-                    'frame_82_01_vertical': self._safe_float(data.get('82-01|')),
-                    'frame_82_01_vertical_pcs': self._safe_int(data.get('82-01|Pcs')),
-                })
-            
-            return self.create(vals)
-        except Exception as e:
-            _logger.error(f"创建框架数据错误: {str(e)}", exc_info=True)
-            return False
-            
-    @api.model
-    def _safe_float(self, value, default=0.0):
-        """安全转换为浮点数"""
-        if value is None:
-            return default
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return default
-            
-    @api.model
-    def _safe_int(self, value, default=0):
-        """安全转换为整数"""
-        if value is None:
-            return default
-        try:
-            return int(float(value))
-        except (ValueError, TypeError):
-            return default
-            
-    @api.model
-    def _safe_str(self, value, default=''):
-        """安全转换为字符串"""
-        if value is None:
-            return default
-        try:
-            return str(value)
-        except (ValueError, TypeError):
-            return default
+    # 框架材料数量字段
+    frame_82_01_qty = fields.Integer('82-01 Qty', default=0)
+    frame_82_02_qty = fields.Integer('82-02 Qty', default=0)
+    frame_82_02b_qty = fields.Integer('82-02B Qty', default=0)
+    frame_82_10_qty = fields.Integer('82-10 Qty', default=0)
+    frame_82_11_qty = fields.Integer('82-11 Qty', default=0)
 
 class WindowSashData(models.Model):
     _name = 'window.sash.data'
@@ -2101,3 +2019,250 @@ class WindowWelderData(models.Model):
         except Exception as e:
             _logger.error(f"创建焊接器数据错误: {str(e)}, 数据: {data}")
             return False
+
+class WindowDecaData(models.Model):
+    _name = 'window.deca.data'
+    _description = 'Window DECA Data'
+    
+    calculation_id = fields.Many2one('window.calculation.result', string='Calculation Result', ondelete='cascade')
+    result_id = fields.Many2one('window.calculation.result', string='Result', related='calculation_id', store=True)
+    
+    batch_no = fields.Char('Batch No')
+    order_no = fields.Char('Order No')
+    order_item = fields.Char('Order Item')
+    material_name = fields.Char('Material Name')
+    cutting_id_pieces_id = fields.Char('Cutting ID/Pieces ID')
+    length = fields.Float('Length')
+    angles = fields.Char('Angles')
+    qty = fields.Integer('Qty')
+    bin_no = fields.Char('Bin No')
+    cart_no = fields.Char('Cart No')
+    position = fields.Char('Position')
+    label_print = fields.Char('Label Print')
+    barcode_no = fields.Char('Barcode No')
+    po_no = fields.Char('PO No')
+    style = fields.Char('Style')
+    frame = fields.Char('Frame')
+    product_size = fields.Char('Product Size')
+    color = fields.Char('Color')
+    grid = fields.Char('Grid')
+    glass = fields.Char('Glass')
+    argon = fields.Char('Argon')
+    painting = fields.Char('Painting')
+    product_dimensions = fields.Char('Product Dimensions')
+    balance = fields.Char('Balance')
+    shift = fields.Char('Shift')
+    ship_date = fields.Char('Ship Date')
+    note = fields.Text('Note')
+    customer = fields.Char('Customer')
+
+    def _save_frame_data(self, calculation_data, result_id):
+        _logger.info("保存框架数据: %s", type(calculation_data))
+        _logger.debug("框架数据内容: %s", calculation_data)
+        
+        frame_dicts = {}
+        frame_records = []
+        
+        try:
+            # 处理框架数据（列表格式）
+            if isinstance(calculation_data, list) and len(calculation_data) > 0:
+                # 初始化框架数据字典，用于记录不同材料和位置的总长度和数量
+                for frame in calculation_data:
+                    material = self._safe_str(frame.get('material', ''))
+                    position = self._safe_str(frame.get('position', ''))
+                    length = self._safe_float(frame.get('length', 0))
+                    qty = self._safe_int(frame.get('qty', 1))
+                    
+                    # 为每种材料和位置组合初始化记录
+                    key = f"{material}_{position}"
+                    if key not in frame_dicts:
+                        frame_dicts[key] = {
+                            'material': material,
+                            'position': position,
+                            'length': 0,
+                            'qty': 0,
+                            # 各种框架材料的长度和数量，初始化为0
+                            'frame_82_01': 0, 'frame_82_02': 0, 'frame_82_02b': 0, 'frame_82_10': 0, 'frame_82_11': 0,
+                            'frame_82_01_qty': 0, 'frame_82_02_qty': 0, 'frame_82_02b_qty': 0, 'frame_82_10_qty': 0, 'frame_82_11_qty': 0
+                        }
+                    
+                    # 累加长度和数量
+                    frame_dicts[key]['length'] += length
+                    frame_dicts[key]['qty'] += qty
+                    
+                    # 根据材料类型，累加到对应的字段
+                    if material == '82-01':
+                        frame_dicts[key]['frame_82_01'] += length
+                        frame_dicts[key]['frame_82_01_qty'] += qty
+                        _logger.debug("累加82-01长度: %s, 数量: %s", length, qty)
+                    elif material == '82-02':
+                        frame_dicts[key]['frame_82_02'] += length
+                        frame_dicts[key]['frame_82_02_qty'] += qty
+                        _logger.debug("累加82-02长度: %s, 数量: %s", length, qty)
+                    elif material == '82-02B':
+                        frame_dicts[key]['frame_82_02b'] += length
+                        frame_dicts[key]['frame_82_02b_qty'] += qty
+                        _logger.debug("累加82-02B长度: %s, 数量: %s", length, qty)
+                    elif material == '82-10':
+                        frame_dicts[key]['frame_82_10'] += length
+                        frame_dicts[key]['frame_82_10_qty'] += qty
+                        _logger.debug("累加82-10长度: %s, 数量: %s", length, qty)
+                    elif material == '82-11':
+                        frame_dicts[key]['frame_82_11'] += length
+                        frame_dicts[key]['frame_82_11_qty'] += qty
+                        _logger.debug("累加82-11长度: %s, 数量: %s", length, qty)
+                
+                # 创建框架数据记录
+                for key, frame_data in frame_dicts.items():
+                    frame_data['calculation_id'] = result_id
+                    frame_record = self.env['window.frame.data'].create(frame_data)
+                    frame_records.append(frame_record.id)
+                    _logger.info("创建框架数据记录: %s", frame_record.id)
+                
+                # 创建汇总记录
+                summary_data = {
+                    'calculation_id': result_id,
+                    'is_summary': True,
+                    'frame_82_01': sum(f['frame_82_01'] for f in frame_dicts.values()),
+                    'frame_82_02': sum(f['frame_82_02'] for f in frame_dicts.values()),
+                    'frame_82_02b': sum(f['frame_82_02b'] for f in frame_dicts.values()),
+                    'frame_82_10': sum(f['frame_82_10'] for f in frame_dicts.values()),
+                    'frame_82_11': sum(f['frame_82_11'] for f in frame_dicts.values()),
+                    'frame_82_01_qty': sum(f['frame_82_01_qty'] for f in frame_dicts.values()),
+                    'frame_82_02_qty': sum(f['frame_82_02_qty'] for f in frame_dicts.values()),
+                    'frame_82_02b_qty': sum(f['frame_82_02b_qty'] for f in frame_dicts.values()),
+                    'frame_82_10_qty': sum(f['frame_82_10_qty'] for f in frame_dicts.values()),
+                    'frame_82_11_qty': sum(f['frame_82_11_qty'] for f in frame_dicts.values()),
+                }
+                
+                summary_record = self.env['window.frame.data'].create(summary_data)
+                frame_records.append(summary_record.id)
+                _logger.info("创建框架数据汇总记录: %s", summary_record.id)
+            
+            # 处理旧格式
+            elif isinstance(calculation_data, dict):
+                _logger.warning("处理旧格式的框架数据")
+                # 旧格式处理逻辑...
+            
+            return frame_records
+        
+        except Exception as e:
+            _logger.error("保存框架数据时出错: %s", str(e))
+            return []
+
+    def _save_deca_data(self, calculation_data, result_id):
+        _logger.info("保存DECA数据: %s", type(calculation_data))
+        
+        deca_records = []
+        
+        try:
+            # 处理DECA数据（列表格式）
+            if isinstance(calculation_data, list) and len(calculation_data) > 0:
+                _logger.info("找到DECA数据列表，条目数: %s", len(calculation_data))
+                
+                # 遍历每个DECA数据项并创建记录
+                for deca_item in calculation_data:
+                    deca_data = {
+                        'calculation_id': result_id,
+                        'batch_no': deca_item.get('batchNo', ''),
+                        'order_no': deca_item.get('orderNo', ''),
+                        'order_item': deca_item.get('orderItem', ''),
+                        'material_name': deca_item.get('materialName', ''),
+                        'cutting_id_pieces_id': deca_item.get('cuttingIDPiecesID', ''),
+                        'length': self._safe_float(deca_item.get('length', 0)),
+                        'angles': deca_item.get('angles', ''),
+                        'qty': self._safe_int(deca_item.get('qty', 0)),
+                        'bin_no': deca_item.get('binNo', ''),
+                        'cart_no': deca_item.get('cartNo', ''),
+                        'position': deca_item.get('position', ''),
+                        'label_print': deca_item.get('labelPrint', ''),
+                        'barcode_no': deca_item.get('barcodeNo', ''),
+                        'po_no': deca_item.get('poNo', ''),
+                        'style': deca_item.get('style', ''),
+                        'frame': deca_item.get('frame', ''),
+                        'product_size': deca_item.get('productSize', ''),
+                        'color': deca_item.get('color', ''),
+                        'grid': deca_item.get('grid', ''),
+                        'glass': deca_item.get('glass', ''),
+                        'argon': deca_item.get('argon', ''),
+                        'painting': deca_item.get('painting', ''),
+                        'product_dimensions': deca_item.get('productDimensions', ''),
+                        'balance': deca_item.get('balance', ''),
+                        'shift': deca_item.get('shift', ''),
+                        'ship_date': deca_item.get('shipDate', ''),
+                        'note': deca_item.get('note', ''),
+                        'customer': deca_item.get('customer', '')
+                    }
+                    
+                    # 创建DECA数据记录
+                    deca_record = self.env['window.deca.data'].create(deca_data)
+                    deca_records.append(deca_record.id)
+                    _logger.debug("创建DECA数据记录: %s", deca_record.id)
+                
+                _logger.info("成功创建%s条DECA数据记录", len(deca_records))
+            else:
+                _logger.warning("未找到有效的DECA数据或格式不正确")
+            
+            return deca_records
+        
+        except Exception as e:
+            _logger.error("保存DECA数据时出错: %s", str(e))
+            return []
+
+    def save_calculation(self, window_id=None, calculation_data=None):
+        """保存计算结果"""
+        if not window_id or not calculation_data:
+            _logger.warning("无法保存计算结果: window_id=%s, 数据大小=%s", 
+                           window_id, len(str(calculation_data)) if calculation_data else 0)
+            return {
+                'success': False,
+                'message': _('Missing window ID or calculation data')
+            }
+        
+        try:
+            # 查询窗户行
+            window_line = self.env['window.production.line'].browse(window_id)
+            if not window_line.exists():
+                _logger.warning("无法找到窗户行记录 ID=%s", window_id)
+                return {
+                    'success': False,
+                    'message': _('Window line not found')
+                }
+            
+            # 创建一个新的计算结果记录
+            result = self.env['window.calculation.result'].create({
+                'production_id': window_line.production_id.id,
+                'window_line_id': window_line.id,
+                'result_json': json.dumps(calculation_data)
+            })
+            
+            # 保存各类数据
+            self._save_general_info(calculation_data.get('formattedWindowInfo', calculation_data.get('windowInfo', {})), result.id)
+            self._save_frame_data(calculation_data.get('frame', []), result.id)
+            self._save_sash_data(calculation_data.get('sash', []), result.id)
+            self._save_screen_data(calculation_data.get('screen', []), result.id)
+            self._save_parts_data(calculation_data.get('parts', []), result.id)
+            self._save_glass_data(calculation_data.get('glass', []), result.id)
+            self._save_grid_data(calculation_data.get('grid', []), result.id)
+            self._save_label_data(calculation_data.get('labelInfo', {}), result.id)
+            self._save_deca_data(calculation_data.get('formattedDeca', []), result.id)
+            
+            # 关联计算结果到窗户行
+            window_line.write({
+                'calculation_id': result.id,
+                'calculation_json': json.dumps(calculation_data)
+            })
+            
+            _logger.info("成功保存窗户计算结果 ID=%s", result.id)
+            return {
+                'success': True,
+                'message': _('Calculation saved successfully'),
+                'result_id': result.id
+            }
+        
+        except Exception as e:
+            _logger.exception("保存计算结果时出错: %s", str(e))
+            return {
+                'success': False,
+                'message': _('Error saving calculation: %s') % str(e)
+            }

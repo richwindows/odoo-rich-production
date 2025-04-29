@@ -49,6 +49,13 @@ class CuttingListPreview extends Component {
             glassData: [],
             gridData: [],
             welderDataList: [], // 添加Sash Welder数据列表
+            decaData: [], // 添加DECA数据数组
+            loadingState: 'loading', // 'loading', 'loaded', 'error'
+            errorMessage: '',
+            expandedPanels: {}, // 跟踪展开/折叠的面板
+            windowCalculationResults: [], // 存储批量保存的计算结果
+            calculationSaveStatus: 'unsaved', // 'unsaved', 'saving', 'saved', 'error'
+            calculationSaveMessage: '' // 保存状态消息
         });
         
         this.orm = useService("orm");
@@ -57,6 +64,32 @@ class CuttingListPreview extends Component {
         
         // 从导入的模块获取窗口计算函数
         this.XOOXWindowCalculator = { processWindowData };
+        
+        // 绑定事件处理方法
+        this.onDownloadFrameCSV = this.downloadFrameDataCSV.bind(this);
+        this.onDownloadSashCSV = this.downloadSashDataCSV.bind(this);
+        this.onDownloadScreenCSV = this.downloadScreenDataCSV.bind(this);
+        this.onDownloadPartsCSV = this.downloadPartsDataCSV.bind(this);
+        this.onDownloadGlassCSV = this.downloadGlassDataCSV.bind(this);
+        this.onDownloadGridCSV = this.downloadGridDataCSV.bind(this);
+        this.onDownloadWelderCSV = this.downloadWelderDataCSV.bind(this);
+        this.onDownloadDecaCSV = this.downloadDecaDataCSV.bind(this); // 添加DECA数据导出
+        this.onSaveCalculations = this.saveCalculations.bind(this);
+        
+        // 材料配置
+        this.materialsConfig = {
+            "materials": [
+                { "id": "HMST82-01", "length": 233 },
+                { "id": "HMST82-02B", "length": 233 },
+                { "id": "HMST82-03", "length": 233 },
+                { "id": "HMST82-04", "length": 233 },
+                { "id": "HMST82-05", "length": 233 },
+                { "id": "HMST82-10", "length": 233 },
+                { "id": "HMST130-01", "length": 181 },
+                { "id": "HMST130-01B", "length": 181 },
+                { "id": "HMST130-02", "length": 181 }
+            ]
+        };
         
         onWillStart(async () => {
             if (!this.state.productionId) {
@@ -429,6 +462,7 @@ class CuttingListPreview extends Component {
         this.state.glassData = [];
         this.state.gridData = [];
         this.state.welderDataList = []; // 重置焊接器数据
+        this.state.decaData = []; // 重置DECA数据
 
         console.log('开始处理窗户数据，窗户数量:', this.state.productLines.length);
         
@@ -529,6 +563,17 @@ class CuttingListPreview extends Component {
                     // 确保calculations对象包含格式化后的welderData
                     if (!calculations.formattedWelder) {
                         calculations.formattedWelder = welderData;
+                    }
+                }
+                
+                // 格式化DECA数据
+                const decaData = await this.formatDecaData(window, calculations);
+                console.log(`窗户ID=${index+1} DECA数据:`, decaData);
+                if (decaData && decaData.length > 0) {
+                    this.state.decaData.push(...decaData);
+                    // 确保calculations对象包含格式化后的decaData
+                    if (!calculations.formattedDeca) {
+                        calculations.formattedDeca = decaData;
                     }
                 }
                 
@@ -1372,7 +1417,7 @@ class CuttingListPreview extends Component {
         }
     }
 
-    processStoredCalculations() {
+    async processStoredCalculations() {
         // 重置所有数据数组
         this.state.frameData = [];
         this.state.sashData = [];
@@ -1381,6 +1426,7 @@ class CuttingListPreview extends Component {
         this.state.glassData = [];
         this.state.gridData = [];
         this.state.welderDataList = []; // 重置焊接器数据列表
+        this.state.decaData = []; // 重置DECA数据列表
 
         console.log('处理已保存的计算结果，窗户数量:', this.state.productLines.length);
         
@@ -1497,6 +1543,37 @@ class CuttingListPreview extends Component {
                             id: window.id,
                             batchNumber: this.state.batchNumber
                         });
+                    }
+                }
+                
+                // 处理DECA数据
+                if (calculationData.deca && calculationData.deca.length > 0) {
+                    const decaItems = calculationData.deca.map(item => ({
+                        ...item,
+                        id: window.id,
+                        batchNumber: this.state.batchNumber
+                    }));
+                    
+                    if (decaItems.length > 0) {
+                        this.state.decaData.push(...decaItems);
+                    }
+                } else {
+                    // 如果没有已保存的DECA数据，尝试重新生成
+                    try {
+                        // 使用框架数据重新生成DECA数据
+                        if (calculationData.frame && calculationData.frame.length > 0) {
+                            const decaData = await this.formatDecaData(window, {
+                                frame: calculationData.frame,
+                                frameType: window.frame
+                            });
+                            
+                            if (decaData && decaData.length > 0) {
+                                this.state.decaData.push(...decaData);
+                                console.log(`为窗户 #${index+1} 重新生成了 ${decaData.length} 条DECA记录`);
+                            }
+                        }
+                    } catch (decaError) {
+                        console.error(`为窗户 #${index+1} 重新生成DECA数据时出错:`, decaError);
                     }
                 }
             } catch (error) {
@@ -1623,6 +1700,254 @@ class CuttingListPreview extends Component {
         }
     }
 
+    /**
+     * 获取材料长度
+     * @param {String} materialName - 材料名称
+     * @returns {Promise<Number>} 材料长度
+     */
+    async getMaterialLength(materialName) {
+        try {
+            // 首先尝试从API获取材料长度
+            const response = await fetch(`/api/material/length?material_id=${encodeURIComponent(materialName)}`);
+            const data = await response.json();
+            
+            if (data.success && data.length) {
+                return data.length;
+            }
+            
+            // 如果API不可用，尝试从materials.json获取
+            try {
+                const configResponse = await fetch('/config/materials.json');
+                const configData = await configResponse.json();
+                const material = configData.materials.find(m => materialName.startsWith(m.id));
+                if (material) {
+                    return material.length;
+                }
+            } catch (configError) {
+                console.warn('无法从配置文件获取材料数据:', configError);
+            }
+            
+            // 回退到内存中的配置
+            const material = this.materialsConfig.materials.find(m => materialName.startsWith(m.id));
+            if (!material) {
+                throw new Error(`未找到材料 ${materialName} 的配置`);
+            }
+            return material.length;
+        } catch (error) {
+            console.error('获取材料长度失败:', error);
+            throw error; // 重新抛出错误以匹配原函数行为
+        }
+    }
+
+    /**
+     * 优化切割组
+     * @param {Array} pieces - 需要切割的片段数组
+     * @param {Number} materialLength - 材料长度
+     * @returns {Array} 优化后的切割组
+     */
+    optimizeCuttingGroups(pieces, materialLength) {
+        // 转换属性名为大写格式，以匹配原始函数
+        const formattedPieces = pieces.map(piece => ({
+            ...piece,
+            Qty: piece.qty,
+            Length: piece.length,
+            Position: piece.position,
+            Material: piece.material
+        }));
+        
+        // 按数量分组
+        const qtyGroups = formattedPieces.reduce((acc, piece) => {
+            const qty = piece.Qty;
+            if (!acc[qty]) acc[qty] = [];
+            acc[qty].push(piece);
+            return acc;
+        }, {});
+
+        let groupId = 1;
+        const optimizedGroups = [];
+
+        // 对每个数量组分别优化
+        Object.entries(qtyGroups).forEach(([qty, pieces]) => {
+            // 按长度从大到小排序
+            const sortedPieces = [...pieces].sort((a, b) => b.Length - a.Length);
+            let remainingPieces = [...sortedPieces];
+            
+            while (remainingPieces.length > 0) {
+                let currentGroup = [];
+                let currentLength = 0;
+                let i = 0;
+
+                const maxAllowedLength = materialLength - 6; // 实际可用的最大长度
+
+                while (i < remainingPieces.length) {
+                    const piece = remainingPieces[i];
+                    const pieceLength = piece.Length;
+                    const cutLoss = currentGroup.length > 0 ? 4 : 0;
+                    const newTotalLength = currentLength + pieceLength + cutLoss;
+
+                    // 确保实际用料不超过材料长度-6
+                    if (newTotalLength <= maxAllowedLength) {
+                        currentGroup.push({
+                            ...piece,
+                            'Cutting ID': groupId,
+                            'Pieces ID': currentGroup.length + 1  // 为每个片段添加序号，从1开始
+                        });
+                        currentLength = newTotalLength;
+                        remainingPieces.splice(i, 1);
+                        i = 0; // 重新从头开始查找可能放入的小片段
+                        continue;
+                    }
+                    i++;
+                }
+
+                // 如果当前组有内容，计算组的总长度和损耗
+                if (currentGroup.length > 0) {
+                    const totalLength = currentGroup.reduce((sum, p) => sum + p.Length, 0); // 所有片段的总长度
+                    const cutLoss = currentGroup.length > 1 ? 4 * (currentGroup.length - 1) : 0; // 切割损耗
+                    const actualLength = totalLength + cutLoss; // 实际用料 = 总长度 + 切割损耗
+                    const remainingLength = materialLength - actualLength; // 剩余长度
+                    const usableRemainingLength = remainingLength - 6; // 可用长度 = 剩余长度 - 端部损耗
+
+                    // 更新组中每个片段的信息
+                    currentGroup.forEach(piece => {
+                        piece.actualLength = actualLength;
+                        piece.remainingLength = remainingLength;
+                        piece.usableRemainingLength = usableRemainingLength;
+                        piece.cutCount = currentGroup.length;
+                        piece.cutLoss = cutLoss;
+                    });
+
+                    optimizedGroups.push(...currentGroup);
+                    groupId++;
+                }
+            }
+        });
+
+        return optimizedGroups;
+    }
+
+    /**
+     * 格式化DECA数据用于表格显示
+     * @param {Object} window - 窗户数据
+     * @param {Object} calculations - 计算结果
+     * @returns {Promise<Array>} 表格显示格式的DECA数据数组
+     */
+    async formatDecaData(window, calculations) {
+        try {
+            // 获取框架数据
+            const frameList = calculations.frame || [];
+            if (!Array.isArray(frameList) || frameList.length === 0) {
+                console.warn(`窗户ID=${window.id} frame数组为空或无效`);
+                return [];
+            }
+
+            // 准备优化前的数据
+            const piecesToOptimize = frameList.map(item => {
+                const { material, position, length, qty } = item;
+                
+                if (!material || !position || !length) {
+                    console.warn(`窗户ID=${window.id} 框架元素数据不完整:`, item);
+                    return null;
+                }
+                
+                // 确定位置描述
+                let positionDesc = '';
+                if (position === '--') {
+                    positionDesc = 'TOP+BOTTOM';
+                } else if (position === '|') {
+                    positionDesc = 'LEFT+RIGHT';
+                } else {
+                    positionDesc = position;
+                }
+                
+                return {
+                    material,
+                    position: positionDesc,
+                    length,
+                    qty: qty || 1,
+                    orderItem: window.id,
+                    style: window.style || '',
+                    frame: window.frame || calculations.frameType || '',
+                    productSize: `${window.width}x${window.height}`,
+                    color: window.color || '',
+                    grid: window.grid || '',
+                    glass: window.glass || '',
+                    argon: window.argon ? 'Yes' : 'No',
+                    customer: window.customer || '',
+                    note: window.note || ''
+                };
+            }).filter(item => item !== null);
+            
+            // 按材料类型分组
+            const materialGroups = piecesToOptimize.reduce((acc, piece) => {
+                if (!acc[piece.material]) acc[piece.material] = [];
+                acc[piece.material].push(piece);
+                return acc;
+            }, {});
+            
+            // 存储最终的DECA数据
+            const decaDataArray = [];
+            
+            // 处理每个材料组
+            for (const [material, pieces] of Object.entries(materialGroups)) {
+                // 获取材料长度 - 使用异步方法需要await
+                const materialLength = await this.getMaterialLength(material).catch(() => 233); // 出错时使用默认值
+                
+                // 优化切割组
+                const optimizedPieces = this.optimizeCuttingGroups(pieces, materialLength);
+                
+                // 创建DECA数据对象
+                optimizedPieces.forEach(piece => {
+                    const decaData = {
+                        batchNo: this.state.batchNumber, // Batch No
+                        orderNo: this.state.batchNumber, // Order No 使用批次号
+                        orderItem: piece.orderItem, // Order Item
+                        materialName: piece.material, // Material Name
+                        cuttingID: piece['Cutting ID'], // Cutting ID - 使用原始属性名
+                        piecesID: piece['Pieces ID'], // Pieces ID - 使用原始属性名
+                        length: piece.Length || piece.length, // Length
+                        angles: '90/90', // Angles (默认为90/90)
+                        qty: piece.Qty || piece.qty, // Qty
+                        binNo: piece['Cutting ID'], // Bin No 使用切割组ID
+                        cartNo: piece['Cutting ID'], // Cart No 使用切割组ID
+                        position: piece.Position || piece.position, // Position
+                        labelPrint: '', // Label Print
+                        barcodeNo: `${this.state.batchNumber}-${piece.orderItem}-${piece.material}-${piece['Cutting ID']}-${piece['Pieces ID']}`, // Barcode No
+                        poNo: '', // PO No
+                        style: piece.style, // Style
+                        frame: piece.frame, // Frame
+                        productSize: piece.productSize, // Product Size
+                        color: piece.color, // Color
+                        grid: piece.grid, // Grid
+                        glass: piece.glass, // Glass
+                        argon: piece.argon, // Argon
+                        painting: '', // Painting
+                        productDBalance: '', // Product D Balance
+                        shift: '', // Shift
+                        shipDate: '', // Ship date
+                        note: piece.note, // Note
+                        customer: piece.customer, // Customer
+                        
+                        // 附加信息用于排序和展示
+                        actualLength: piece.actualLength,
+                        remainingLength: piece.remainingLength,
+                        usableRemainingLength: piece.usableRemainingLength,
+                        cutCount: piece.cutCount,
+                        cutLoss: piece.cutLoss
+                    };
+                    
+                    decaDataArray.push(decaData);
+                });
+            }
+            
+            console.log(`窗户ID=${window.id} 生成了 ${decaDataArray.length} 条DECA记录`);
+            return decaDataArray;
+        } catch (error) {
+            console.error('Error formatting DECA data:', error);
+            return [];
+        }
+    }
+
     getWelderDataTable() {
         if (!(this.state.welderDataList || []).length) {
             return [];
@@ -1635,6 +1960,557 @@ class CuttingListPreview extends Component {
             }
             return a.style.localeCompare(b.style);
         });
+    }
+
+    /**
+     * 获取DECA数据表格
+     * @returns {Array} 格式化后的DECA数据数组
+     */
+    getDecaDataTable() {
+        if (!this.state.decaData || !this.state.decaData.length) {
+            return [];
+        }
+        
+        // 按照批次号、材料名、切割ID和片段ID排序
+        return [...this.state.decaData].sort((a, b) => {
+            if (a.batchNo !== b.batchNo) {
+                return a.batchNo.localeCompare(b.batchNo);
+            }
+            if (a.materialName !== b.materialName) {
+                return a.materialName.localeCompare(b.materialName);
+            }
+            if (a.cuttingID !== b.cuttingID) {
+                return a.cuttingID - b.cuttingID;
+            }
+            return a.piecesID - b.piecesID;
+        });
+    }
+
+    /**
+     * 通用CSV下载方法
+     * @param {Array} headers - CSV表头数组
+     * @param {Array} rows - CSV数据行数组，每行是一个数组
+     * @param {String} filename - 下载的文件名
+     */
+    downloadCSV(headers, rows, filename) {
+        if (!headers || !rows) {
+            console.warn('无效的CSV数据');
+            return;
+        }
+        
+        // 构建CSV内容
+        const csvContent = [
+            // 添加表头
+            headers.join(','),
+            // 添加数据行
+            ...rows.map(row => 
+                row.map(cell => {
+                    // 处理特殊字符，如逗号、引号、换行符等
+                    if (cell === null || cell === undefined) {
+                        return '';
+                    }
+                    
+                    const cellStr = String(cell);
+                    // 如果包含逗号、引号或换行符，则用引号包裹并处理内部引号
+                    if (cellStr.indexOf(',') !== -1 || cellStr.indexOf('"') !== -1 || 
+                        cellStr.indexOf('\n') !== -1 || cellStr.indexOf('\r') !== -1) {
+                        return '"' + cellStr.replace(/"/g, '""') + '"';
+                    }
+                    return cellStr;
+                }).join(',')
+            )
+        ].join('\n');
+        
+        // 创建Blob对象
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        
+        // 使用download服务下载文件
+        const url = URL.createObjectURL(blob);
+        
+        // 创建临时链接并触发下载
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        
+        // 清理
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    /**
+     * 下载焊接器数据为CSV
+     */
+    downloadWelderDataCSV() {
+        const data = this.getWelderDataTable();
+        if (!data || data.length === 0) {
+            console.warn('没有焊接器数据可下载');
+            return;
+        }
+        
+        // 定义CSV表头
+        const headers = [
+            '序号', 
+            '客户', 
+            '窗户样式', 
+            '嵌扇宽度', 
+            '嵌扇高度', 
+            '调整后宽度', 
+            '调整后高度', 
+            '数量', 
+            '颜色'
+        ];
+        
+        // 映射数据行
+        const rows = data.map(item => [
+            item.id, 
+            item.customer, 
+            item.style, 
+            item.width, 
+            item.height, 
+            item.sashWidth, 
+            item.sashHeight, 
+            item.pieces, 
+            item.color
+        ]);
+        
+        // 使用通用的CSV下载方法
+        this.downloadCSV(headers, rows, `焊接器数据_${this.state.batchNumber}.csv`);
+    }
+
+    /**
+     * 下载DECA数据为CSV
+     */
+    downloadDecaDataCSV() {
+        const data = this.getDecaDataTable();
+        if (!data || data.length === 0) {
+            console.warn('没有DECA数据可下载');
+            return;
+        }
+        
+        // 定义CSV表头 - 完整的DECA数据字段
+        const headers = [
+            'Batch No', 
+            'Order No', 
+            'Order Item', 
+            'Material Name', 
+            'Cutting ID', 
+            'Pieces ID', 
+            'Length', 
+            'Angles', 
+            'Qty', 
+            'Bin No',
+            'Cart No',
+            'Position',
+            'Label Print',
+            'Barcode No',
+            'PO No',
+            'Style',
+            'Frame',
+            'Product Size',
+            'Color',
+            'Grid',
+            'Glass',
+            'Argon',
+            'Painting',
+            'Product D Balance',
+            'Shift',
+            'Ship date',
+            'Note',
+            'Customer'
+        ];
+        
+        // 映射数据行
+        const rows = data.map(item => [
+            item.batchNo,
+            item.orderNo,
+            item.orderItem,
+            item.materialName,
+            item.cuttingID,
+            item.piecesID,
+            item.length,
+            item.angles,
+            item.qty,
+            item.binNo,
+            item.cartNo,
+            item.position,
+            item.labelPrint,
+            item.barcodeNo,
+            item.poNo,
+            item.style,
+            item.frame,
+            item.productSize,
+            item.color,
+            item.grid,
+            item.glass,
+            item.argon,
+            item.painting,
+            item.productDBalance,
+            item.shift,
+            item.shipDate,
+            item.note,
+            item.customer
+        ]);
+        
+        // 使用通用的CSV下载方法
+        this.downloadCSV(headers, rows, `DECA数据_${this.state.batchNumber}.csv`);
+    }
+
+    /**
+     * 下载框架数据为CSV
+     */
+    downloadFrameDataCSV() {
+        if (!this.state.frameData || this.state.frameData.length === 0) {
+            console.warn('没有框架数据可下载');
+            this.notificationService.add("没有框架数据可下载", { type: "warning" });
+            return;
+        }
+        
+        // 定义CSV表头
+        const headers = [
+            '批次',
+            '样式',
+            '82-02B--',
+            '数量',
+            '82-02B|',
+            '数量',
+            '82-10--',
+            '数量',
+            '82-10|',
+            '数量',
+            '82-01--',
+            '数量',
+            '82-01|',
+            '数量',
+            '颜色',
+            'ID'
+        ];
+        
+        // 映射数据行
+        const rows = this.state.frameData.map(row => [
+            row.batch || '',
+            row.style || '',
+            row['82-02B--'] || 0,
+            row['82-02BPcs'] || 0,
+            row['82-02B|'] || 0,
+            row['82-02B|Pcs'] || 0,
+            row['82-10--'] || 0,
+            row['82-10Pcs'] || 0,
+            row['82-10|'] || 0,
+            row['82-10|Pcs'] || 0,
+            row['82-01--'] || 0,
+            row['82-01Pcs'] || 0,
+            row['82-01|'] || 0,
+            row['82-01|Pcs'] || 0,
+            row.color || '',
+            row.id || ''
+        ]);
+        
+        // 使用通用的CSV下载方法
+        this.downloadCSV(headers, rows, `框架数据_${this.state.batchNumber}.csv`);
+    }
+
+    /**
+     * 下载嵌扇数据为CSV
+     */
+    downloadSashDataCSV() {
+        if (!this.state.sashData || this.state.sashData.length === 0) {
+            console.warn('没有嵌扇数据可下载');
+            this.notificationService.add("没有嵌扇数据可下载", { type: "warning" });
+            return;
+        }
+        
+        // 定义CSV表头
+        const headers = [
+            '批次',
+            '样式',
+            '82-03--',
+            '数量',
+            '82-03|',
+            '数量',
+            '82-05|',
+            '数量',
+            '82-04--',
+            '数量',
+            '82-04|',
+            '数量',
+            '颜色',
+            'ID'
+        ];
+        
+        // 映射数据行
+        const rows = this.state.sashData.map(row => [
+            row.batch || '',
+            row.style || '',
+            row['82-03--'] || 0,
+            row['82-03Pcs'] || 0,
+            row['82-03|'] || 0,
+            row['82-03|Pcs'] || 0,
+            row['82-05|'] || 0,
+            row['82-05|Pcs'] || 0,
+            row['82-04--'] || 0,
+            row['82-04Pcs'] || 0,
+            row['82-04|'] || 0,
+            row['82-04|Pcs'] || 0,
+            row.color || '',
+            row.id || ''
+        ]);
+        
+        // 使用通用的CSV下载方法
+        this.downloadCSV(headers, rows, `嵌扇数据_${this.state.batchNumber}.csv`);
+    }
+
+    /**
+     * 下载屏幕数据为CSV
+     */
+    downloadScreenDataCSV() {
+        if (!this.state.screenData || this.state.screenData.length === 0) {
+            console.warn('没有屏幕数据可下载');
+            this.notificationService.add("没有屏幕数据可下载", { type: "warning" });
+            return;
+        }
+        
+        // 定义CSV表头
+        const headers = [
+            '客户',
+            'ID',
+            '样式',
+            '屏幕宽度',
+            '数量',
+            '屏幕高度',
+            '数量',
+            '颜色',
+            'ID'
+        ];
+        
+        // 映射数据行
+        const rows = this.state.screenData.map(row => [
+            row.customer || '',
+            row.lineId || '',
+            row.style || '',
+            row.screenw || 0,
+            row.screenwPcs || 0,
+            row.screenh || 0,
+            row.screenhPcs || 0,
+            row.color || '',
+            row.id || ''
+        ]);
+        
+        // 使用通用的CSV下载方法
+        this.downloadCSV(headers, rows, `屏幕数据_${this.state.batchNumber}.csv`);
+    }
+
+    /**
+     * 下载配件数据为CSV
+     */
+    downloadPartsDataCSV() {
+        if (!this.state.partsData || this.state.partsData.length === 0) {
+            console.warn('没有配件数据可下载');
+            this.notificationService.add("没有配件数据可下载", { type: "warning" });
+            return;
+        }
+        
+        // 定义CSV表头
+        const headers = [
+            '批次',
+            'ID',
+            '样式',
+            '窗格条',
+            '中心铝',
+            '把手铝',
+            '数量',
+            '轨道',
+            '水平盖板',
+            '垂直盖板',
+            '大窗格条',
+            '数量',
+            '第二大窗格条',
+            '数量',
+            '斜度',
+            '颜色',
+            'ID'
+        ];
+        
+        // 映射数据行
+        const rows = this.state.partsData.map(row => [
+            row.batch || '',
+            row.lineId || '',
+            row.style || '',
+            row.mullion || '',
+            row.centerAlu || '',
+            row.handleAlu || '',
+            row.handlePcs || 0,
+            row.track || '',
+            row.coverH || '',
+            row.coverV || '',
+            row.largeMullion || '',
+            row.largeMullionPcs || 0,
+            row.largeMullion2 || '',
+            row.largeMullion2Pcs || 0,
+            row.slop || '',
+            row.color || '',
+            row.id || ''
+        ]);
+        
+        // 使用通用的CSV下载方法
+        this.downloadCSV(headers, rows, `配件数据_${this.state.batchNumber}.csv`);
+    }
+
+    /**
+     * 下载玻璃数据为CSV
+     */
+    downloadGlassDataCSV() {
+        if (!this.state.glassData || this.state.glassData.length === 0) {
+            console.warn('没有玻璃数据可下载');
+            this.notificationService.add("没有玻璃数据可下载", { type: "warning" });
+            return;
+        }
+        
+        // 定义CSV表头
+        const headers = [
+            '客户',
+            '样式',
+            '宽度',
+            '高度',
+            'FH',
+            'ID',
+            '行号',
+            '数量',
+            '玻璃类型',
+            '钢化',
+            '厚度',
+            '玻璃宽度',
+            '玻璃高度',
+            '网格',
+            '氩气',
+            'ID'
+        ];
+        
+        // 映射数据行 - 注意玻璃数据可能需要特殊处理，因为它可能有多行
+        const rows = this.state.glassData.map(row => [
+            row.customer || '',
+            row.style || '',
+            row.width || 0,
+            row.height || 0,
+            row.fh || '',
+            row.id || '',
+            row.lineNumber || '',
+            row.quantity || 0,
+            row.glassType || '',
+            row.tempered || '',
+            row.thickness || '',
+            row.glassWidth || 0,
+            row.glassHeight || 0,
+            row.grid || '',
+            row.argon || '',
+            row.id || ''
+        ]);
+        
+        // 使用通用的CSV下载方法
+        this.downloadCSV(headers, rows, `玻璃数据_${this.state.batchNumber}.csv`);
+    }
+
+    /**
+     * 下载网格数据为CSV
+     */
+    downloadGridDataCSV() {
+        if (!this.state.gridData || this.state.gridData.length === 0) {
+            console.warn('没有网格数据可下载');
+            this.notificationService.add("没有网格数据可下载", { type: "warning" });
+            return;
+        }
+        
+        // 定义CSV表头
+        const headers = [
+            '批次',
+            '样式',
+            '网格样式',
+            'W1',
+            '数量',
+            '一刀',
+            'H1',
+            '数量',
+            '一刀',
+            'W2',
+            '数量',
+            '一刀',
+            'H2',
+            '数量',
+            '一刀',
+            'ID',
+            '备注',
+            '颜色'
+        ];
+        
+        // 映射数据行
+        const rows = this.state.gridData.map(row => [
+            row.batch || '',
+            row.style || '',
+            row.gridStyle || '',
+            row.w1 || 0,
+            row.w1Pcs || 0,
+            row.w1Cut || false,
+            row.h1 || 0,
+            row.h1Pcs || 0,
+            row.h1Cut || false,
+            row.w2 || 0,
+            row.w2Pcs || 0,
+            row.w2Cut || false,
+            row.h2 || 0,
+            row.h2Pcs || 0,
+            row.h2Cut || false,
+            row.id || '',
+            row.note || '',
+            row.color || ''
+        ]);
+        
+        // 使用通用的CSV下载方法
+        this.downloadCSV(headers, rows, `网格数据_${this.state.batchNumber}.csv`);
+    }
+
+    /**
+     * 保存计算结果
+     */
+    async saveCalculations() {
+        // 检查是否有计算结果
+        if (!this.state.windowCalculationResults || this.state.windowCalculationResults.length === 0) {
+            console.warn('没有计算结果可保存');
+            this.notificationService.add("没有计算结果可保存", { type: "warning" });
+            return;
+        }
+        
+        this.state.calculationSaveStatus = 'saving';
+        this.state.calculationSaveMessage = '正在保存计算结果...';
+        
+        try {
+            // 使用orm调用后端方法保存计算结果
+            const result = await this.orm.call(
+                'window.calculation.result',
+                'save_multiple_calculations',
+                [this.state.windowCalculationResults]
+            );
+            
+            if (result && result.success) {
+                this.state.calculationSaveStatus = 'saved';
+                this.state.calculationSaveMessage = `保存成功：${result.saved_count} 个计算结果已保存`;
+                this.notificationService.add(this.state.calculationSaveMessage, { type: "success" });
+            } else {
+                this.state.calculationSaveStatus = 'error';
+                this.state.calculationSaveMessage = `保存失败：${result.message || '未知错误'}`;
+                this.notificationService.add(this.state.calculationSaveMessage, { type: "danger" });
+                
+                // 显示详细错误信息
+                if (result.errors && result.errors.length > 0) {
+                    console.error('保存错误详情:', result.errors);
+                }
+            }
+        } catch (error) {
+            this.state.calculationSaveStatus = 'error';
+            this.state.calculationSaveMessage = `保存出错：${error.message || '未知错误'}`;
+            this.notificationService.add(this.state.calculationSaveMessage, { type: "danger" });
+            console.error('保存计算结果时出错:', error);
+        }
     }
 }
 

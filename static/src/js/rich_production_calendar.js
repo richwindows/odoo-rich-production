@@ -72,7 +72,7 @@ class FullCalendarView extends Component {
             // 增大事件高度
             contentHeight: 'auto',
             eventDisplay: 'block', // 使用块状显示，占用更多空间
-            eventMinHeight: 50, // 设置事件最小高度
+            eventMinHeight: 80, // 设置事件最小高度，增加到80以适应更多内容
             // 事件点击和渲染处理
             eventClick: (info) => {
                 this._openEventForm(info.event);
@@ -152,13 +152,10 @@ class FullCalendarView extends Component {
                 return null;
             }
             
-            // 设置标题为批次号和批次名称
+            // 设置标题为批次号
             let title = '';
             if (record.batch_number) {
                 title = record.batch_number;
-                if (record.batch) {
-                    title += ` (${record.batch})`;
-                }
             } else if (record.batch) {
                 title = record.batch;
             } else {
@@ -240,52 +237,40 @@ class FullCalendarView extends Component {
         // 添加额外的CSS类和自定义内容
         eventEl.classList.add('rich-calendar-event');
         
-        // 为事件创建一个更丰富的内容结构
+        // 为事件创建一个更简洁的内容结构
         const eventContent = eventEl.querySelector('.fc-event-title-container') || eventEl.querySelector('.fc-event-main');
         if (eventContent) {
             // 清除现有内容
             const title = eventContent.querySelector('.fc-event-title')?.textContent || '';
             eventContent.innerHTML = '';
             
-            // 创建标题
+            // 创建标题 - 批次号
             const titleEl = document.createElement('div');
             titleEl.className = 'fc-event-title fw-bold fs-6';
             titleEl.textContent = title;
             eventContent.appendChild(titleEl);
             
-            // 创建批次信息
-            if (batch) {
+            // 创建简洁信息容器
+            const infoContainer = document.createElement('div');
+            infoContainer.className = 'fc-event-extra-info mt-1';
+            
+            // 添加批次信息 - 如果不同于批次号
+            if (batch && batch !== batch_number) {
                 const batchEl = document.createElement('div');
-                batchEl.className = 'fc-event-batch';
-                batchEl.textContent = `批次: ${batch}`;
-                eventContent.appendChild(batchEl);
+                batchEl.className = 'fc-event-batch fw-medium';
+                batchEl.textContent = batch;
+                infoContainer.appendChild(batchEl);
             }
             
-            // 创建客户信息
+            // 添加客户信息 - 重要信息
             if (customer) {
                 const customerEl = document.createElement('div');
-                customerEl.className = 'fc-event-customer';
-                customerEl.textContent = `客户: ${customer}`;
-                eventContent.appendChild(customerEl);
+                customerEl.className = 'fc-event-customer fw-medium';
+                customerEl.textContent = customer;
+                infoContainer.appendChild(customerEl);
             }
             
-            // 添加产品数量
-            if (total_items) {
-                const itemsEl = document.createElement('div');
-                itemsEl.className = 'fc-event-items';
-                itemsEl.textContent = `数量: ${total_items}`;
-                eventContent.appendChild(itemsEl);
-            }
-            
-            // 添加负责人信息
-            if (responsible) {
-                const respEl = document.createElement('div');
-                respEl.className = 'fc-event-responsible mt-1';
-                respEl.textContent = `负责人: ${responsible}`;
-                eventContent.appendChild(respEl);
-            }
-            
-            // 添加状态信息
+            // 添加状态标签 - 使用简短的标签而不是完整文本
             if (state) {
                 let stateText = '';
                 let stateClass = '';
@@ -312,9 +297,14 @@ class FullCalendarView extends Component {
                 }
                 
                 const stateEl = document.createElement('div');
-                stateEl.className = `fc-event-state ${stateClass} mt-1`;
-                stateEl.textContent = `状态: ${stateText}`;
-                eventContent.appendChild(stateEl);
+                stateEl.className = `fc-event-state ${stateClass}`;
+                stateEl.textContent = stateText;
+                infoContainer.appendChild(stateEl);
+            }
+            
+            // 将信息容器添加到事件内容中
+            if (infoContainer.children.length > 0) {
+                eventContent.appendChild(infoContainer);
             }
         }
     }
