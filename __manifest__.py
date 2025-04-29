@@ -14,7 +14,6 @@
     'depends': ['base', 'mail', 'contacts', 'sale_management', 'account', 'web'],
     'data': [
         'security/ir.model.access.csv',
-        'security/security.xml',
         'data/window_calculation_formula_data.xml',
         'views/window_calculation_formula_views.xml',
         'views/assets.xml',

@@ -172,10 +172,6 @@
                                         <th style="min-width: 25px; width: 25px;">Pcs</th>
                                         <th style="min-width: 67px; width: 67px;">82-01|</th>
                                         <th style="min-width: 25px; width: 25px;">Pcs</th>
-                                        <th style="min-width: 67px; width: 67px;">82-01G4</th>
-                                        <th style="min-width: 25px; width: 25px;">Pcs</th>
-                                        <th style="min-width: 67px; width: 67px;">82-01J4</th>
-                                        <th style="min-width: 25px; width: 25px;">Pcs</th>
                                         <th style="min-width: 50px; width: 50px;">Color</th>
                                         <th style="min-width: 25px; width: 25px;">ID</th>
                                     </tr>
@@ -202,10 +198,6 @@
                                             <td><t t-esc="row['82-01Pcs']"/></td>
                                             <td><t t-esc="row['82-01|']"/></td>
                                             <td><t t-esc="row['82-01|Pcs']"/></td>
-                                            <td><t t-esc="row['82-01G4']"/></td>
-                                            <td><t t-esc="row['82-01G4Pcs']"/></td>
-                                            <td><t t-esc="row['82-01J4']"/></td>
-                                            <td><t t-esc="row['82-01J4Pcs']"/></td>
                                             <td><t t-esc="row.color"/></td>
                                             <td><t t-esc="row.id"/></td>
                                         </tr>

@@ -6,6 +6,7 @@ import base64
 from werkzeug.wrappers import Response
 import logging
 from datetime import datetime
+import json
 
 class RichProduction(http.Controller):
     
@@ -541,4 +542,110 @@ class RichProduction(http.Controller):
             "控制器正常工作！当前时间: " + str(datetime.now()),
             status=200,
             headers=[('Content-Type', 'text/plain')]
-        ) 
+        )
+
+    @http.route('/api/rich_production/window_calculation/list', type='json', auth='user')
+    def list_window_calculations(self, **kwargs):
+        """获取窗户计算结果列表"""
+        try:
+            data = request.jsonrequest
+            production_id = data.get('production_id')
+            
+            domain = []
+            if production_id:
+                domain = [('production_id', '=', production_id)]
+            
+            results = request.env['window.calculation.result'].search_read(
+                domain=domain,
+                fields=['id', 'name', 'production_id']
+            )
+            
+            return {
+                'status': 'success',
+                'results': results
+            }
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+    
+    @http.route('/api/rich_production/window_calculation/get/<int:result_id>', type='json', auth='user')
+    def get_window_calculation(self, result_id, **kwargs):
+        """获取窗户计算结果详情"""
+        try:
+            result = request.env['window.calculation.result'].browse(result_id)
+            if not result.exists():
+                return {'status': 'error', 'message': 'Record not found'}
+            
+            # 获取关联的详细数据
+            frame_data = request.env['window.frame.data'].search_read(
+                domain=[('result_id', '=', result_id)],
+                fields=['name', 'width', 'height', 'material', 'quantity', 'data_json']
+            )
+            
+            sash_data = request.env['window.sash.data'].search_read(
+                domain=[('result_id', '=', result_id)],
+                fields=['name', 'width', 'height', 'material', 'quantity', 'data_json']
+            )
+            
+            screen_data = request.env['window.screen.data'].search_read(
+                domain=[('result_id', '=', result_id)],
+                fields=['name', 'width', 'height', 'material', 'quantity', 'data_json']
+            )
+            
+            parts_data = request.env['window.parts.data'].search_read(
+                domain=[('result_id', '=', result_id)],
+                fields=['name', 'specs', 'material', 'quantity', 'data_json']
+            )
+            
+            glass_data = request.env['window.glass.data'].search_read(
+                domain=[('result_id', '=', result_id)],
+                fields=['name', 'width', 'height', 'thickness', 'type', 'quantity', 'data_json']
+            )
+            
+            grid_data = request.env['window.grid.data'].search_read(
+                domain=[('result_id', '=', result_id)],
+                fields=['name', 'length', 'material', 'quantity', 'data_json']
+            )
+            
+            return {
+                'status': 'success',
+                'result': {
+                    'id': result.id,
+                    'name': result.name,
+                    'production_id': result.production_id.id if result.production_id else False,
+                    'result_json': json.loads(result.result_json) if result.result_json else {},
+                    'frame_data': frame_data,
+                    'sash_data': sash_data,
+                    'screen_data': screen_data,
+                    'parts_data': parts_data,
+                    'glass_data': glass_data,
+                    'grid_data': grid_data
+                }
+            }
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+    
+    @http.route('/api/rich_production/window_calculation/delete/<int:result_id>', type='json', auth='user')
+    def delete_window_calculation(self, result_id, **kwargs):
+        """删除窗户计算结果"""
+        try:
+            result = request.env['window.calculation.result'].browse(result_id)
+            if not result.exists():
+                return {'status': 'error', 'message': 'Record not found'}
+            
+            result.unlink()
+            
+            return {
+                'status': 'success',
+                'message': 'Window calculation result deleted successfully'
+            }
+        except Exception as e:
+            return {
+                'status': 'error',
+                'message': str(e)
+            } 

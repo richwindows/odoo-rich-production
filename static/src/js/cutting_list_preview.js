@@ -131,6 +131,49 @@ class CuttingListPreview extends Component {
                 
                 this.state.batchNumber = productions[0].batch_number || '';
                 
+                // 尝试获取批次的所有计算结果
+                if (this.state.batchNumber) {
+                    try {
+                        console.log("尝试获取批次的所有计算结果");
+                        const calculationResults = await this.orm.call(
+                            "window.calculation.result",
+                            "get_batch_calculation_results",
+                            [this.state.batchNumber]
+                        );
+                        
+                        if (calculationResults && calculationResults.length > 0) {
+                            console.log("获取到计算结果:", calculationResults);
+                            
+                            // 将计算结果转换为产品行列表
+                            const productLines = calculationResults.map((result, index) => ({
+                                id: result.item_id || index + 1,
+                                customer: result.customer || '',
+                                style: result.style || '',
+                                width: result.width || 0,
+                                height: result.height || 0,
+                                fh: result.fh || '',
+                                frame: result.frame || '',
+                                glass: result.glass || '',
+                                argon: result.argon || false,
+                                grid: result.grid || '',
+                                color: result.color || '',
+                                note: result.note || '',
+                                // 将计算结果保存到产品行中，以便后续处理
+                                calculationData: result
+                            }));
+                            
+                            if (productLines.length > 0) {
+                                this.state.productLines = productLines;
+                                this.notificationService.add("成功加载已保存的计算结果", { type: "success" });
+                                this.processStoredCalculations();
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error("获取计算结果失败:", error);
+                    }
+                }
+                
                 if (!productions[0].product_line_ids || productions[0].product_line_ids.length === 0) {
                     console.warn("生产记录没有关联的产品行");
                     this.notificationService.add("该生产记录中没有产品数据，请先添加产品", { type: "warning" });
@@ -382,6 +425,9 @@ class CuttingListPreview extends Component {
         this.state.gridData = [];
 
         console.log('开始处理窗户数据，窗户数量:', this.state.productLines.length);
+        
+        // 创建一个计算结果数组，用于后续批量保存
+        const calculationResults = [];
 
         // Process each window - 使用for循环而不是forEach以便使用await
         for (let index = 0; index < this.state.productLines.length; index++) {
@@ -408,6 +454,10 @@ class CuttingListPreview extends Component {
                 console.log(`窗户 #${index+1} 框架数据:`, frameData);
                 if (frameData) {
                     this.state.frameData.push(frameData);
+                    // 确保calculations对象包含格式化后的frameData
+                    if (!calculations.formattedFrame) {
+                        calculations.formattedFrame = frameData;
+                    }
                 }
                 
                 // Format sash data for display in the sash details table
@@ -415,6 +465,10 @@ class CuttingListPreview extends Component {
                 console.log(`窗户 #${index+1} 嵌扇数据:`, sashData);
                 if (sashData) {
                     this.state.sashData.push(sashData);
+                    // 确保calculations对象包含格式化后的sashData
+                    if (!calculations.formattedSash) {
+                        calculations.formattedSash = sashData;
+                    }
                 }
                 
                 // Format screen data for display in the screen table
@@ -422,6 +476,10 @@ class CuttingListPreview extends Component {
                 console.log(`窗户 #${index+1} 屏幕数据:`, screenData);
                 if (screenData) {
                     this.state.screenData.push(screenData);
+                    // 确保calculations对象包含格式化后的screenData
+                    if (!calculations.formattedScreen) {
+                        calculations.formattedScreen = screenData;
+                    }
                 }
                 
                 // Format parts data for display in the parts table
@@ -429,6 +487,10 @@ class CuttingListPreview extends Component {
                 console.log(`窗户 #${index+1} 配件数据:`, partsData);
                 if (partsData) {
                     this.state.partsData.push(partsData);
+                    // 确保calculations对象包含格式化后的partsData
+                    if (!calculations.formattedParts) {
+                        calculations.formattedParts = partsData;
+                    }
                 }
                 
                 // Format glass data for display in the glass table
@@ -436,6 +498,10 @@ class CuttingListPreview extends Component {
                 console.log(`窗户 #${index+1} 玻璃数据:`, glassData);
                 if (glassData && glassData.length > 0) {
                     this.state.glassData.push(...glassData);
+                    // 确保calculations对象包含格式化后的glassData
+                    if (!calculations.formattedGlass) {
+                        calculations.formattedGlass = glassData;
+                    }
                 }
                 
                 // Format grid data for display in the grid table
@@ -443,6 +509,53 @@ class CuttingListPreview extends Component {
                 console.log(`窗户 #${index+1} 网格数据:`, gridData);
                 if (gridData) {
                     this.state.gridData.push(gridData);
+                    // 确保calculations对象包含格式化后的gridData
+                    if (!calculations.formattedGrid) {
+                        calculations.formattedGrid = gridData;
+                    }
+                }
+                
+                // 将计算结果添加到数组，以便后续批量保存
+                if (window.id) {
+                    // 添加窗户基本信息
+                    calculations.windowInfo = {
+                        customer: window.customer || '',
+                        style: window.style || '',
+                        width: window.width || 0,
+                        height: window.height || 0,
+                        fh: window.fh || '',
+                        frame: window.frame || '',
+                        glass: window.glass || '',
+                        argon: window.argon || false,
+                        grid: window.grid || '',
+                        grid_size: window.grid_size || '',
+                        color: window.color || '',
+                        note: window.note || '',
+                        item_id: window.id
+                    };
+                    
+                    // 添加格式化的窗户信息，保持与其他formatted*对象一致的格式
+                    calculations.formattedWindowInfo = {
+                        batch: this.state.batchNumber,
+                        customer: window.customer || '',
+                        style: window.style || '',
+                        width: window.width || 0,
+                        height: window.height || 0,
+                        fh: window.fh || '',
+                        id: window.id,
+                        frame: window.frame || '',
+                        glass: window.glass || '',
+                        argon: window.argon || false,
+                        grid: window.grid || '',
+                        grid_size: window.grid_size || '',
+                        color: window.color || '',
+                        note: window.note || ''
+                    };
+                    
+                    calculationResults.push({
+                        windowId: window.id,
+                        calculations: calculations
+                    });
                 }
             } catch (error) {
                 console.error(`处理窗户 #${index+1} 时发生错误:`, error);
@@ -471,14 +584,59 @@ class CuttingListPreview extends Component {
             });
         }
         
+        // 所有数据处理完成后，批量保存计算结果
+        if (calculationResults.length > 0 && this.state.productionId) {
+            try {
+                console.log('开始批量保存计算结果...');
+                console.log('计算结果:', calculationResults);
+                
+                // 逐个保存每个窗户的计算结果
+                for (const result of calculationResults) {
+                    try {
+                        // 只保存格式化后的数据，减少存储量
+                        const calculationData = {
+                            // 保存格式化后的数据
+                            formattedFrame: result.calculations.formattedFrame || {},
+                            formattedSash: result.calculations.formattedSash || {},
+                            formattedScreen: result.calculations.formattedScreen || {},
+                            formattedParts: result.calculations.formattedParts || {},
+                            formattedGlass: result.calculations.formattedGlass || [],
+                            formattedGrid: result.calculations.formattedGrid || {},
+                            formattedWindowInfo: result.calculations.formattedWindowInfo || {},
+                            
+                            // 保留必要的框架类型信息
+                            frameType: result.calculations.frameType || ''
+                        };
+                        
+                        console.log(`准备保存窗户ID=${result.windowId}的格式化计算结果:`, calculationData);
+                        
+                        const saveResult = await this.orm.call(
+                            'window.calculation.result',
+                            'save_calculation',
+                            [result.windowId, calculationData]
+                        );
+                        console.log(`窗户ID=${result.windowId} 计算结果保存成功:`, saveResult);
+                    } catch (saveError) {
+                        console.error(`窗户ID=${result.windowId} 计算结果保存失败:`, saveError);
+                    }
+                }
+                
+                console.log('所有计算结果保存完成');
+                this.notificationService.add("数据处理并保存完成", { type: "success" });
+            } catch (batchSaveError) {
+                console.error('批量保存计算结果失败:', batchSaveError);
+                this.notificationService.add("部分数据保存失败", { type: "warning" });
+            }
+        }
+        
         // 输出最终结果
-        console.log('数据处理完成，最终结果:');
-        console.log('- 框架数据:', this.state.frameData.length, '条', this.state.frameData);
-        console.log('- 嵌扇数据:', this.state.sashData.length, '条', this.state.sashData);
-        console.log('- 屏幕数据:', this.state.screenData.length, '条', this.state.screenData);
-        console.log('- 配件数据:', this.state.partsData.length, '条', this.state.partsData);
-        console.log('- 玻璃数据:', this.state.glassData.length, '条', this.state.glassData);
-        console.log('- 网格数据:', this.state.gridData.length, '条', this.state.gridData);
+        // console.log('数据处理完成，最终结果:');
+        // console.log('- 框架数据:', this.state.frameData.length, '条', this.state.frameData);
+        // console.log('- 嵌扇数据:', this.state.sashData.length, '条', this.state.sashData);
+        // console.log('- 屏幕数据:', this.state.screenData.length, '条', this.state.screenData);
+        // console.log('- 配件数据:', this.state.partsData.length, '条', this.state.partsData);
+        // console.log('- 玻璃数据:', this.state.glassData.length, '条', this.state.glassData);
+        // console.log('- 网格数据:', this.state.gridData.length, '条', this.state.gridData);
     }
     
     /**
@@ -1190,6 +1348,150 @@ class CuttingListPreview extends Component {
             console.error('Error formatting grid data:', error);
             return null;
         }
+    }
+
+    processStoredCalculations() {
+        // 重置所有数据数组
+        this.state.frameData = [];
+        this.state.sashData = [];
+        this.state.screenData = [];
+        this.state.partsData = [];
+        this.state.glassData = [];
+        this.state.gridData = [];
+
+        console.log('处理已保存的计算结果，窗户数量:', this.state.productLines.length);
+        
+        // 处理每个窗户的计算结果
+        for (let index = 0; index < this.state.productLines.length; index++) {
+            const window = this.state.productLines[index];
+            const calculationData = window.calculationData;
+            
+            if (!calculationData) {
+                console.warn(`窗户 #${index+1} 没有计算数据`);
+                continue;
+            }
+            
+            try {
+                console.log(`处理窗户 #${index+1} 的已保存计算结果:`, calculationData);
+                
+                // 处理窗口基本信息
+                window.formattedWindowInfo = calculationData.formattedWindowInfo || {
+                    batch: this.state.batchNumber,
+                    customer: window.customer || '',
+                    style: window.style || '',
+                    width: window.width || 0,
+                    height: window.height || 0,
+                    fh: window.fh || '',
+                    id: window.id,
+                    frame: window.frame || '',
+                    glass: window.glass || '',
+                    argon: window.argon || false,
+                    grid: window.grid || '',
+                    grid_size: window.grid_size || '',
+                    color: window.color || '',
+                    note: window.note || ''
+                };
+                
+                // 处理框架数据
+                if (calculationData.frame && calculationData.frame.length > 0) {
+                    const frameData = calculationData.frame[0]; // 使用第一条记录
+                    if (frameData) {
+                        this.state.frameData.push({
+                            ...frameData,
+                            id: window.id,
+                            batchNumber: this.state.batchNumber
+                        });
+                    }
+                }
+                
+                // 处理嵌扇数据
+                if (calculationData.sash && calculationData.sash.length > 0) {
+                    const sashData = calculationData.sash[0]; // 使用第一条记录
+                    if (sashData) {
+                        this.state.sashData.push({
+                            ...sashData,
+                            id: window.id,
+                            batchNumber: this.state.batchNumber
+                        });
+                    }
+                }
+                
+                // 处理屏幕数据
+                if (calculationData.screen && calculationData.screen.length > 0) {
+                    const screenData = calculationData.screen[0]; // 使用第一条记录
+                    if (screenData) {
+                        this.state.screenData.push({
+                            ...screenData,
+                            id: window.id,
+                            batchNumber: this.state.batchNumber
+                        });
+                    }
+                }
+                
+                // 处理零部件数据
+                if (calculationData.parts && calculationData.parts.length > 0) {
+                    const partsData = calculationData.parts[0]; // 使用第一条记录
+                    if (partsData) {
+                        this.state.partsData.push({
+                            ...partsData,
+                            id: window.id,
+                            batchNumber: this.state.batchNumber
+                        });
+                    }
+                }
+                
+                // 处理玻璃数据
+                if (calculationData.glass && calculationData.glass.length > 0) {
+                    const glassItems = calculationData.glass.map(item => ({
+                        ...item,
+                        id: window.id,
+                        batchNumber: this.state.batchNumber
+                    }));
+                    
+                    if (glassItems.length > 0) {
+                        this.state.glassData.push(...glassItems);
+                    }
+                }
+                
+                // 处理网格数据
+                if (calculationData.grid && calculationData.grid.length > 0) {
+                    const gridData = calculationData.grid[0]; // 使用第一条记录
+                    if (gridData) {
+                        this.state.gridData.push({
+                            ...gridData,
+                            id: window.id,
+                            batchNumber: this.state.batchNumber
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error(`处理窗户 #${index+1} 的已保存计算结果时出错:`, error);
+            }
+        }
+        
+        // 对Glass数据按ID和lineNumber排序
+        if (this.state.glassData && this.state.glassData.length > 0) {
+            // 先按ID排序，再按lineNumber排序
+            this.state.glassData.sort((a, b) => {
+                if (a.id !== b.id) {
+                    return a.id - b.id;
+                }
+                return (a.lineNumber || 0) - (b.lineNumber || 0);
+            });
+            
+            // 标记每个ID的第一行
+            let currentId = null;
+            this.state.glassData.forEach(item => {
+                if (item.id !== currentId) {
+                    item.isFirstLine = true;
+                    currentId = item.id;
+                } else {
+                    item.isFirstLine = false;
+                }
+            });
+        }
+        
+        this.state.loading = false;
     }
 }
 
