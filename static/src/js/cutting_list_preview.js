@@ -1,10 +1,13 @@
 /** @odoo-module **/
 
+// -*- coding: utf-8 -*-
+// Rich Production cutting list preview
+import { Component, useState, onWillStart, onMounted } from "@odoo/owl";
 import { registry } from "@web/core/registry";
-import { Component, onWillStart, useState, onMounted } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 import { download } from "@web/core/network/download";
 import { processWindowData } from "./window_calculations/xo_ox_window";
+import { _t } from "@web/core/l10n/translation";
 
 class CuttingListPreview extends Component {
     setup() {
@@ -34,6 +37,7 @@ class CuttingListPreview extends Component {
         
         this.state = useState({
             productionId: productionId,
+            reportId: false,
             productLines: [],
             batchNumber: '',
             loading: true,
@@ -44,6 +48,7 @@ class CuttingListPreview extends Component {
             partsData: [],
             glassData: [],
             gridData: [],
+            welderDataList: [], // 添加Sash Welder数据列表
         });
         
         this.orm = useService("orm");
@@ -423,6 +428,7 @@ class CuttingListPreview extends Component {
         this.state.partsData = [];
         this.state.glassData = [];
         this.state.gridData = [];
+        this.state.welderDataList = []; // 重置焊接器数据
 
         console.log('开始处理窗户数据，窗户数量:', this.state.productLines.length);
         
@@ -512,6 +518,17 @@ class CuttingListPreview extends Component {
                     // 确保calculations对象包含格式化后的gridData
                     if (!calculations.formattedGrid) {
                         calculations.formattedGrid = gridData;
+                    }
+                }
+                
+                // 格式化焊接器数据
+                const welderData = this.formatWelderData(window, calculations);
+                console.log(`窗户 #${index+1} 焊接器数据:`, welderData);
+                if (welderData) {
+                    this.state.welderDataList.push(welderData);
+                    // 确保calculations对象包含格式化后的welderData
+                    if (!calculations.formattedWelder) {
+                        calculations.formattedWelder = welderData;
                     }
                 }
                 
@@ -1113,70 +1130,75 @@ class CuttingListPreview extends Component {
     }
     
     async downloadExcel() {
-        try {
-            if (!this.state.productionId) {
-                this.notificationService.add("无法获取生产ID，无法下载Excel", {
-                    type: "danger",
+        if (!this.state.reportId) {
+            // If no report ID, create a report first
+            try {
+                // 使用orm服务调用controller方法
+                const result = await this.orm.call(
+                    'rich_production.cutting.list.report',
+                    'create_for_production', 
+                    [this.state.productionId]
+                );
+                
+                if (result) {
+                    this.state.reportId = result;
+                } else {
+                    // Show error message
+                    this.notificationService.add(_t("Failed to create report. Please try again."), {
+                        type: 'danger',
+                    });
+                    return;
+                }
+            } catch (error) {
+                this.notificationService.add(_t("Error creating report: ") + (error.message || 'Unknown error'), {
+                    type: 'danger',
                 });
                 return;
             }
-            
-            // 显示加载中通知
-            this.notificationService.add("Excel生成中，请稍候...", {
-                type: "info",
-            });
-            
-            // 直接使用生产ID构建下载URL
-            const url = `/rich_production/download_excel/${this.state.productionId}`;
-            
-            // 使用fetch API直接下载文件
-            const response = await fetch(url, {
-                method: 'GET',
-                credentials: 'same-origin',
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            
-            // 获取文件名
-            const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = `cutting_list_${this.state.productionId}.xlsx`;
-            
-            if (contentDisposition) {
-                const filenameMatch = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
-                if (filenameMatch && filenameMatch[1]) {
-                    filename = filenameMatch[1].replace(/['"]/g, '');
-                }
-            }
-            
-            // 获取blob数据
-            const blob = await response.blob();
-            
-            // 创建下载链接
-            const url_object = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url_object;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            
-            // 清理
-            window.URL.revokeObjectURL(url_object);
-            document.body.removeChild(link);
-            
-            // 显示成功通知
-            this.notificationService.add("Excel文件下载成功", {
-                type: "success",
-            });
-        } catch (error) {
-            console.error("下载Excel文件失败", error);
-            this.notificationService.add(`下载Excel文件失败: ${error.message || '未知错误'}`, {
-                type: "danger",
-            });
         }
+        
+        // Redirect to download URL
+        const downloadUrl = `/rich_production/download_excel/${this.state.reportId}`;
+        window.location.href = downloadUrl;
     }
     
+    /**
+     * Download a single sheet from the cutting list report
+     * @param {String} sheetName - Name of the sheet to download (general_info, sash_welder, etc.)
+     */
+    async downloadSingleSheet(sheetName) {
+        if (!this.state.reportId) {
+            // If no report ID, create a report first
+            try {
+                // 使用orm服务调用controller方法
+                const result = await this.orm.call(
+                    'rich_production.cutting.list.report',
+                    'create_for_production', 
+                    [this.state.productionId]
+                );
+                
+                if (result) {
+                    this.state.reportId = result;
+                } else {
+                    // Show error message
+                    this.notificationService.add(_t("Failed to create report. Please try again."), {
+                        type: 'danger',
+                    });
+                    return;
+                }
+            } catch (error) {
+                this.notificationService.add(_t("Error creating report: ") + (error.message || 'Unknown error'), {
+                    type: 'danger',
+                });
+                return;
+            }
+        }
+        
+        // Redirect to download URL for the specific sheet
+        const downloadUrl = `/rich_production/download_sheet/${this.state.reportId}/${sheetName}`;
+        window.location.href = downloadUrl;
+    }
+
     async downloadPdf() {
         try {
             if (!this.state.productionId) {
@@ -1358,6 +1380,7 @@ class CuttingListPreview extends Component {
         this.state.partsData = [];
         this.state.glassData = [];
         this.state.gridData = [];
+        this.state.welderDataList = []; // 重置焊接器数据列表
 
         console.log('处理已保存的计算结果，窗户数量:', this.state.productLines.length);
         
@@ -1464,6 +1487,18 @@ class CuttingListPreview extends Component {
                         });
                     }
                 }
+                
+                // 处理焊接器数据
+                if (calculationData.welder && calculationData.welder.length > 0) {
+                    const welderData = calculationData.welder[0]; // 使用第一条记录
+                    if (welderData) {
+                        this.state.welderDataList.push({
+                            ...welderData,
+                            id: window.id,
+                            batchNumber: this.state.batchNumber
+                        });
+                    }
+                }
             } catch (error) {
                 console.error(`处理窗户 #${index+1} 的已保存计算结果时出错:`, error);
             }
@@ -1492,6 +1527,114 @@ class CuttingListPreview extends Component {
         }
         
         this.state.loading = false;
+    }
+
+    /**
+     * 格式化焊接器数据用于表格显示
+     * @param {Object} window - 窗户数据
+     * @param {Object} calculations - 计算结果
+     * @returns {Object} 表格显示格式的焊接器数据
+     */
+    formatWelderData(window, calculations) {
+        try {
+            // 检查窗户是否有必要的信息
+            if (!window.width || !window.height) {
+                return null;
+            }
+            
+            // 获取嵌扇数据
+            const sashData = calculations.sash || [];
+            let width = '';
+            let height = '';
+            
+            // 从嵌扇数据中提取尺寸
+            if (Array.isArray(sashData) && sashData.length > 0) {
+                // 嵌扇宽度通常是水平方向('--')的长度
+                const sashWidthItem = sashData.find(item => 
+                    (item.material === '82-03' || item.material === '82-04') && 
+                    item.position === '--');
+                
+                // 嵌扇高度通常是垂直方向('|')的长度
+                const sashHeightItem = sashData.find(item => 
+                    (item.material === '82-03' || item.material === '82-04') && 
+                    item.position === '|');
+                
+                if (sashWidthItem) {
+                    width = sashWidthItem.length;
+                }
+                
+                if (sashHeightItem) {
+                    height = sashHeightItem.length;
+                }
+            }
+            
+            // 如果无法从计算中获取嵌扇尺寸，则尝试从直接属性获取
+            if (!width && calculations.sashWidth) {
+                width = calculations.sashWidth;
+            }
+            
+            if (!height && calculations.sashHeight) {
+                height = calculations.sashHeight;
+            }
+            
+            // 如果仍然没有数据，可能这个窗户没有嵌扇
+            if (!width && !height) {
+                return null;
+            }
+            
+            // 计算毫米尺寸并减去6mm，然后转为英寸
+            // 假设原始值是英寸，1英寸 = 25.4毫米
+            let sashWidth = '';
+            let sashHeight = '';
+            
+            if (width) {
+                // 转为毫米，减去6mm，再转回英寸
+                const widthInMm = parseFloat(width) * 25.4;
+                const adjustedWidthInMm = widthInMm - 6;
+                sashWidth = (adjustedWidthInMm / 25.4).toFixed(2);
+            }
+            
+            if (height) {
+                // 转为毫米，减去6mm，再转回英寸
+                const heightInMm = parseFloat(height) * 25.4;
+                const adjustedHeightInMm = heightInMm - 6;
+                sashHeight = (adjustedHeightInMm / 25.4).toFixed(2);
+            }
+            
+            // 计算嵌扇数量 - 根据样式中X的数量
+            const style = window.style || '';
+            const pieces = (style.match(/X/gi) || []).length || 1;
+            
+            // 创建焊接器数据对象
+            return {
+                id: window.id,
+                customer: window.customer || '',
+                style: window.style || '',
+                width: width, // 原始嵌扇宽度
+                height: height, // 原始嵌扇高度
+                sashWidth: sashWidth, // 调整后的宽度 (mm - 6mm 转为英寸)
+                sashHeight: sashHeight, // 调整后的高度 (mm - 6mm 转为英寸)
+                pieces: pieces, // 根据style中X的数量
+                color: window.color || ''
+            };
+        } catch (error) {
+            console.error('Error formatting welder data:', error);
+            return null;
+        }
+    }
+
+    getWelderDataTable() {
+        if (!(this.state.welderDataList || []).length) {
+            return [];
+        }
+        
+        // Sort by customer and style
+        return [...this.state.welderDataList].sort((a, b) => {
+            if (a.customer !== b.customer) {
+                return a.customer.localeCompare(b.customer);
+            }
+            return a.style.localeCompare(b.style);
+        });
     }
 }
 

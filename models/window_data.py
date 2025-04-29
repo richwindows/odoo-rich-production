@@ -31,6 +31,7 @@ class WindowCalculationResult(models.Model):
     glass_ids = fields.One2many('window.glass.data', 'calculation_id', string='玻璃数据')
     grid_ids = fields.One2many('window.grid.data', 'calculation_id', string='网格数据')
     label_ids = fields.One2many('window.label.data', 'calculation_id', string='标签数据')
+    welder_ids = fields.One2many('window.welder.data', 'calculation_id', string='焊接器数据')
     
     has_cached_data = fields.Boolean(string='有缓存数据', default=False)
     
@@ -400,6 +401,21 @@ class WindowCalculationResult(models.Model):
             'po': label_data.get('po', '')
         }
     
+    def _format_welder_data(self, welder):
+        """格式化焊接器数据"""
+        return {
+            'batch': welder.batch,
+            'customer': welder.customer,
+            'style': welder.style,
+            'id': welder.item_id,
+            'width': welder.width,
+            'height': welder.height,
+            'sashWidth': welder.sash_width,
+            'sashHeight': welder.sash_height,
+            'pieces': welder.pieces,
+            'color': welder.color
+        }
+    
     def _save_general_info(self, calc_id, calculation_data, sudo_inst=None):
         """保存常规信息"""
         if not calc_id or not calculation_data:
@@ -591,6 +607,7 @@ class WindowCalculationResult(models.Model):
             self._save_glass_data(calc_result.id, save_data, sudo_inst=self_sudo)
             self._save_grid_data(calc_result.id, save_data, sudo_inst=self_sudo)
             self._save_label_data(calc_result.id, save_data, sudo_inst=self_sudo)
+            self._save_welder_data(calc_result.id, save_data, sudo_inst=self_sudo)
             
             _logger.info(f"窗户ID={window_id}的计算结果保存成功")
             # 所有处理成功后才提交事务，不在函数内提交事务，由调用方决定
@@ -1114,6 +1131,56 @@ class WindowCalculationResult(models.Model):
             _logger.error(f"保存标签数据错误: {str(e)}, calc_id: {calc_id}")
             # 继续处理，不影响其他数据保存
     
+    def _save_welder_data(self, calc_id, calculation_data, sudo_inst=None):
+        """保存焊接器数据"""
+        if not calc_id or not calculation_data:
+            return
+        
+        # 使用sudo获取管理员权限
+        welder_model = self.env['window.welder.data'].sudo()
+        
+        # 先删除旧数据
+        welder_model.search([('calculation_id', '=', calc_id)]).unlink()
+        
+        # 保存新数据 - 优先使用格式化后的welderData
+        if 'formattedWelder' in calculation_data and calculation_data['formattedWelder']:
+            try:
+                _logger.info(f"使用格式化的welderData保存焊接器数据")
+                
+                # 检查是否是列表类型
+                formatted_welders = calculation_data['formattedWelder']
+                if not isinstance(formatted_welders, list):
+                    formatted_welders = [formatted_welders]  # 如果不是列表，转换为单元素列表
+                
+                _logger.info(f"处理{len(formatted_welders)}个格式化焊接器数据项")
+                
+                # 遍历处理每个焊接器数据
+                for welder_data in formatted_welders:
+                    welder_model.create_from_data(welder_data, calc_id, calc_id)
+                
+                _logger.info(f"格式化焊接器数据处理完成")
+                return True
+            except Exception as e:
+                _logger.error(f"处理格式化焊接器数据时出错: {str(e)}")
+        
+        # 如果没有格式化数据，尝试从计算数据中提取
+        try:
+            _logger.info(f"尝试从计算数据中提取焊接器数据")
+            
+            # 从计算结果JSON中提取焊接器相关数据
+            if 'welder' in calculation_data:
+                for welder in calculation_data['welder']:
+                    welder_model.create_from_data(welder, calc_id, calc_id)
+            elif 'welderList' in calculation_data:
+                for welder in calculation_data['welderList']:
+                    welder_model.create_from_data(welder, calc_id, calc_id)
+            
+            _logger.info(f"从计算数据中提取焊接器数据完成")
+            return True
+        except Exception as e:
+            _logger.error(f"从计算数据中提取焊接器数据时出错: {str(e)}")
+            return False
+    
     def clear_calculation_cache(self, window_ids=None):
         """清除计算缓存"""
         domain = [('has_cached_data', '=', True)]
@@ -1138,7 +1205,8 @@ class WindowCalculationResult(models.Model):
             'parts': [self._format_parts_data(part) for part in result.parts_ids],
             'glass': [self._format_glass_data(glass) for glass in result.glass_ids],
             'grid': [self._format_grid_data(grid) for grid in result.grid_ids],
-            'label': [self._format_label_data(label) for label in result.label_ids]
+            'label': [self._format_label_data(label) for label in result.label_ids],
+            'welder': [self._format_welder_data(welder) for welder in result.welder_ids]
         }
         
         # 添加窗户行的基本信息（从general_info中获取）
@@ -1186,6 +1254,7 @@ class WindowCalculationResult(models.Model):
         self._save_glass_data(calc_result.id, calculation_data)
         self._save_grid_data(calc_result.id, calculation_data)
         self._save_label_data(calc_result.id, calculation_data)
+        self._save_welder_data(calc_result.id, calculation_data)
         
         return {'success': True}
 
@@ -1973,3 +2042,62 @@ class WindowLabelData(models.Model):
         except Exception as e:
             _logger.error(f"创建标签数据错误: {str(e)}, 数据: {label_data}")
             return False 
+
+class WindowWelderData(models.Model):
+    _name = 'window.welder.data'
+    _description = '窗户焊接器数据'
+    
+    calculation_id = fields.Many2one('window.calculation.result', string='计算结果', ondelete='cascade')
+    result_id = fields.Many2one('window.calculation.result', string='计算结果', ondelete='cascade')
+    
+    # 基本信息
+    batch = fields.Char(string='批次')
+    customer = fields.Char(string='客户')
+    style = fields.Char(string='风格')
+    color = fields.Char(string='颜色')
+    item_id = fields.Integer(string='ID')
+    
+    # 尺寸数据
+    width = fields.Float(string='宽度')
+    height = fields.Float(string='高度')
+    sash_width = fields.Float(string='嵌扇宽度')
+    sash_height = fields.Float(string='嵌扇高度')
+    pieces = fields.Integer(string='数量', default=1)
+    
+    # 兼容字段
+    data_json = fields.Text(string='原始数据')
+    
+    @api.model
+    def create_from_data(self, data, calculation_id=None, result_id=None):
+        """从字典数据创建记录"""
+        if not data:
+            return False
+        
+        parent = self.env['window.calculation.result'].browse(calculation_id)
+        if not parent:
+            return False
+        
+        try:
+            vals = {
+                'calculation_id': calculation_id,
+                'result_id': result_id,
+                'batch': parent._safe_str(data.get('batch')),
+                'customer': parent._safe_str(data.get('customer')),
+                'style': parent._safe_str(data.get('style')),
+                'color': parent._safe_str(data.get('color')),
+                'item_id': parent._safe_int(data.get('id')),
+                
+                # 尺寸数据
+                'width': parent._safe_float(data.get('width')),
+                'height': parent._safe_float(data.get('height')),
+                'sash_width': parent._safe_float(data.get('sashWidth')),
+                'sash_height': parent._safe_float(data.get('sashHeight')),
+                'pieces': parent._safe_int(data.get('pieces')),
+                
+                # 原始数据
+                'data_json': json.dumps(data)
+            }
+            return self.create(vals)
+        except Exception as e:
+            _logger.error(f"创建焊接器数据错误: {str(e)}, 数据: {data}")
+            return False

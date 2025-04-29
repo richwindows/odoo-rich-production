@@ -11,9 +11,23 @@
                     <button class="btn btn-sm btn-info me-1" t-on-click="downloadPdf">
                         <i class="fa fa-file-pdf-o me-1"/>Download PDF
                     </button>
-                    <button class="btn btn-sm btn-success me-1" t-on-click="downloadExcel">
-                        <i class="fa fa-file-excel-o me-1"/>Download Excel
-                    </button>
+                    <div class="dropdown d-inline-block">
+                        <button id="downloadExcelBtn" class="btn btn-sm btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fa fa-file-excel-o me-1"/>Download Excel
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="downloadExcelBtn">
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="downloadExcel">完整Excel</a></li>
+                            <li><hr class="dropdown-divider"/></li>
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="ev => this.downloadSingleSheet('general_info')">General Information</a></li>
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="ev => this.downloadSingleSheet('sash_welder')">Sash Welder</a></li>
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="ev => this.downloadSingleSheet('frame_data')">Frame Data</a></li>
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="ev => this.downloadSingleSheet('sash_data')">Sash Data</a></li>
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="ev => this.downloadSingleSheet('screen_data')">Screen Data</a></li>
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="ev => this.downloadSingleSheet('parts_data')">Parts Data</a></li>
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="ev => this.downloadSingleSheet('grid_data')">Grid Data</a></li>
+                            <li><a class="dropdown-item" href="#" t-on-click.prevent="ev => this.downloadSingleSheet('glass_data')">Glass Data</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             
@@ -83,6 +97,11 @@
                                 t-att-class="state.activeTab === 'label' ? 'btn-secondary active-tab' : 'btn-outline-secondary'"
                                 t-on-click="() => this.state.activeTab = 'label'">
                                 Label
+                            </button>
+                            <button class="btn mx-1"
+                                t-att-class="state.activeTab === 'sash-welder' ? 'btn-danger active-tab' : 'btn-outline-danger'"
+                                t-on-click="() => this.state.activeTab = 'sash-welder'">
+                                Sash Welder
                             </button>
                         </div>
                     </div>
@@ -568,6 +587,55 @@
                                             <td><t t-esc="row.grid"/></td>
                                             <td><t t-esc="row.argon"/></td>
                                             <td><t t-esc="row.id"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Sash Welder table -->
+                    <div t-if="state.activeTab === 'sash-welder'" class="cutting-list-container" style="max-width: 210mm; margin: 0 auto; padding: 3mm; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+                        <div class="header text-center mb-3">
+                            <h2 style="font-size: 18px; font-weight: bold;">Sash Welding List</h2>
+                        </div>
+                        
+                        <div class="batch-info mb-2" style="font-size: 14px; font-weight: bold;">
+                            <strong>Batch NO.: </strong><span t-esc="state.batchNumber"/>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped" style="width: 100%; font-size: 11px;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 22%;">Customer</th>
+                                        <th style="width: 8%;">ID</th>
+                                        <th style="width: 10%;">Style</th>
+                                        <th style="width: 12%;">W</th>
+                                        <th style="width: 12%;">H</th>
+                                        <th style="width: 12%;">Sash W</th>
+                                        <th style="width: 12%;">Sash H</th>
+                                        <th style="width: 6%;">Pcs</th>
+                                        <th style="width: 6%;">ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-if="!(state.welderDataList || []).length">
+                                        <tr>
+                                            <td colspan="9" class="text-center">No data</td>
+                                        </tr>
+                                    </t>
+                                    <t t-foreach="this.getWelderDataTable()" t-as="item" t-key="item.id">
+                                        <tr>
+                                            <td><t t-esc="item.customer || ''"/></td>
+                                            <td><t t-esc="item.id || ''"/></td>
+                                            <td><t t-esc="item.style || ''"/></td>
+                                            <td><t t-esc="item.width || ''"/></td>
+                                            <td><t t-esc="item.height || ''"/></td>
+                                            <td><t t-esc="item.sashWidth || ''"/></td>
+                                            <td><t t-esc="item.sashHeight || ''"/></td>
+                                            <td><t t-esc="item.pieces || 0"/></td>
+                                            <td><t t-esc="item.id || ''"/></td>
                                         </tr>
                                     </t>
                                 </tbody>

@@ -173,6 +173,52 @@ class RichProduction(http.Controller):
                 headers=[('Content-Type', 'text/plain')]
             )
     
+    @http.route('/rich_production/download_sheet/<int:report_id>/<string:sheet_name>', type='http', auth='user')
+    def download_sheet(self, report_id, sheet_name, **kw):
+        """下载单个工作表的Excel文件"""
+        _logger = logging.getLogger(__name__)
+        _logger.info(f"下载单个工作表请求，报表ID: {report_id}, 工作表: {sheet_name}")
+        
+        try:
+            # 获取报表记录
+            report = request.env['rich_production.cutting.list.report'].sudo().browse(report_id)
+            
+            if not report.exists():
+                _logger.warning(f"报表 {report_id} 不存在")
+                return request.not_found()
+            
+            # 生成单个工作表报表
+            result = report.sudo().generate_single_sheet_report(sheet_name)
+            
+            if not result or not result.get('file_content'):
+                raise Exception(f"生成工作表 {sheet_name} 失败")
+            
+            # 解码Excel文件内容
+            file_content = base64.b64decode(result['file_content'])
+            filename = result['filename']
+            
+            _logger.info(f"成功生成工作表 {sheet_name}，大小: {len(file_content)} 字节, 文件名: {filename}")
+            
+            # 设置下载响应头
+            headers = [
+                ('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+                ('Content-Disposition', f'attachment; filename="{filename}"'),
+                ('Content-Length', str(len(file_content))),
+                ('Cache-Control', 'no-cache, no-store, must-revalidate'),
+                ('Pragma', 'no-cache'),
+                ('Expires', '0'),
+            ]
+            
+            # 返回文件下载响应
+            return request.make_response(file_content, headers=headers)
+        except Exception as e:
+            _logger.exception(f"下载工作表 {sheet_name} 时出错: {str(e)}")
+            return Response(
+                f"下载工作表时出错: {str(e)}", 
+                status=500,
+                headers=[('Content-Type', 'text/plain')]
+            )
+    
     @http.route('/rich_production/print_pdf/<int:report_id>', type='http', auth='user', methods=['GET', 'POST'])
     def print_pdf(self, report_id, **kw):
         """打印PDF版本"""
