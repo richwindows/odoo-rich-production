@@ -41,4 +41,10 @@
           action="action_window_calculation_formula"
           sequence="30"/>
 
+<!-- 配置菜单 -->
+<menuitem id="menu_rich_production_config"
+          name="配置"
+          parent="menu_rich_production_root"
+          sequence="35"/>
+
 </odoo> 
